@@ -17,3 +17,10 @@
 ###> symfony/web-server-bundle ###
 /.web-server-pid
 ###< symfony/web-server-bundle ###
+
+.idea/dictionaries
+.idea/workspace.xml
+.idea/dataSources
+.idea/dataSources.xml
+
+/docker/docker-compose-override.yml
