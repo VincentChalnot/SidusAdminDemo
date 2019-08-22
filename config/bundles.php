@@ -14,4 +14,10 @@ return [
     Symfony\Bundle\DebugBundle\DebugBundle::class => ['dev' => true, 'test' => true],
     Symfony\Bundle\MakerBundle\MakerBundle::class => ['dev' => true],
     Symfony\Bundle\WebServerBundle\WebServerBundle::class => ['dev' => true],
+    Sidus\BaseBundle\SidusBaseBundle::class => ['all' => true],
+    Sidus\AdminBundle\SidusAdminBundle::class => ['all' => true],
+    Sidus\DataGridBundle\SidusDataGridBundle::class => ['all' => true],
+    Sidus\FilterBundle\SidusFilterBundle::class => ['all' => true],
+    CleverAge\PermissionBundle\CleverAgePermissionBundle::class => ['all' => true],
+    WhiteOctober\PagerfantaBundle\WhiteOctoberPagerfantaBundle::class => ['all' => true],
 ];

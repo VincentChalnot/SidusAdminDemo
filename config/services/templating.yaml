@@ -1,0 +1,3 @@
+services:
+    Symfony\Bundle\FrameworkBundle\Templating\EngineInterface:
+        alias: templating.engine.twig

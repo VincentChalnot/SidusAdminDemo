@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+    <a href="https://github.com/VincentChalnot/SidusAdminDemo">
+        <img class="fixed-top" style="left:auto"
+             src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
+    </a>
+    {{ parent() }}
+{% endblock %}
+
+{% block container %}
+    <h2>Sidus/AdminBundle Demo</h2>
+    <p>Checkout the documentation on Github:
+        <a href="https://github.com/VincentChalnot/SidusAdminBundle">
+            https://github.com/VincentChalnot/SidusAdminBundle
+        </a>
+    </p>
+    {{ render_datagrid(datagrid) }}
+{% endblock %}
