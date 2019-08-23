@@ -112,5 +112,7 @@ class InitFixturesCommand extends Command
             }
         }
         $em->flush();
+
+        $output->writeln('Fixtures load correctly');
     }
 }
