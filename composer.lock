@@ -4,26 +4,31 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a3e1dea879eb854197acc51e40709dbf",
+    "content-hash": "8eec395e64f490b8b7e10cc0ecbe3288",
     "packages": [
         {
             "name": "cleverage/permission-bundle",
-            "version": "v1.0.2",
+            "version": "v1.0.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cleverage/permission-bundle.git",
-                "reference": "b2af31f16617ce8dcb4adb92692928175fffc2bf"
+                "reference": "a4c3b7502380daca53c916f57d0b156c1baf1a6a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cleverage/permission-bundle/zipball/b2af31f16617ce8dcb4adb92692928175fffc2bf",
-                "reference": "b2af31f16617ce8dcb4adb92692928175fffc2bf",
+                "url": "https://api.github.com/repos/cleverage/permission-bundle/zipball/a4c3b7502380daca53c916f57d0b156c1baf1a6a",
+                "reference": "a4c3b7502380daca53c916f57d0b156c1baf1a6a",
                 "shasum": ""
             },
             "require": {
                 "php": ">=7.1",
-                "sidus/base-bundle": "1.0.*",
-                "symfony/symfony": "^3.0|^4.0"
+                "sidus/base-bundle": "~1.0",
+                "symfony/config": "^3.0|^4.0",
+                "symfony/dependency-injection": "^3.0|^4.0",
+                "symfony/form": "^3.0|^4.0",
+                "symfony/http-kernel": "^3.0|^4.0",
+                "symfony/options-resolver": "^3.0|^4.0",
+                "symfony/security-core": "^3.0|^4.0"
             },
             "type": "library",
             "autoload": {
@@ -43,13 +48,13 @@
                     "homepage": "http://chalnot.fr"
                 }
             ],
-            "description": "Attribute-level permissions based on roles for PHP classes",
+            "description": "Simple permissions based on roles against any PHP object, class or any string",
             "homepage": "https://github.com/cleverage/permission-bundle",
             "keywords": [
                 "permissions",
                 "roles"
             ],
-            "time": "2019-07-09T12:44:56+00:00"
+            "time": "2019-08-23T13:42:08+00:00"
         },
         {
             "name": "doctrine/annotations",
@@ -2155,21 +2160,30 @@
         },
         {
             "name": "sidus/base-bundle",
-            "version": "v1.0.14",
+            "version": "v1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/VincentChalnot/SidusBaseBundle.git",
-                "reference": "35a34b4a1c5315d2de5ce0c3970253a52dab8320"
+                "reference": "f1941d4d0e642f0a94471f6a24bc193cff023234"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/VincentChalnot/SidusBaseBundle/zipball/35a34b4a1c5315d2de5ce0c3970253a52dab8320",
-                "reference": "35a34b4a1c5315d2de5ce0c3970253a52dab8320",
+                "url": "https://api.github.com/repos/VincentChalnot/SidusBaseBundle/zipball/f1941d4d0e642f0a94471f6a24bc193cff023234",
+                "reference": "f1941d4d0e642f0a94471f6a24bc193cff023234",
                 "shasum": ""
             },
             "require": {
                 "php": ">=5.6",
-                "symfony/translation": "~3.0|~4.0"
+                "symfony/config": "~3.0|~4.0",
+                "symfony/dependency-injection": "~3.0|~4.0",
+                "symfony/finder": "~3.0|~4.0",
+                "symfony/form": "~3.0|~4.0",
+                "symfony/http-foundation": "~3.0|~4.0",
+                "symfony/http-kernel": "~3.0|~4.0",
+                "symfony/options-resolver": "~3.0|~4.0",
+                "symfony/translation": "~3.0|~4.0",
+                "symfony/validator": "~3.0|~4.0",
+                "symfony/var-dumper": "~3.0|~4.0"
             },
             "type": "symfony-bundle",
             "autoload": {
@@ -2195,7 +2209,7 @@
                 "base",
                 "symfony"
             ],
-            "time": "2019-07-02T12:21:17+00:00"
+            "time": "2019-08-22T19:50:46+00:00"
         },
         {
             "name": "sidus/datagrid-bundle",
@@ -5817,6 +5831,82 @@
             "time": "2019-07-23T11:21:36+00:00"
         },
         {
+            "name": "symfony/var-dumper",
+            "version": "v4.3.3",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/symfony/var-dumper.git",
+                "reference": "e4110b992d2cbe198d7d3b244d079c1c58761d07"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/symfony/var-dumper/zipball/e4110b992d2cbe198d7d3b244d079c1c58761d07",
+                "reference": "e4110b992d2cbe198d7d3b244d079c1c58761d07",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^7.1.3",
+                "symfony/polyfill-mbstring": "~1.0",
+                "symfony/polyfill-php72": "~1.5"
+            },
+            "conflict": {
+                "phpunit/phpunit": "<4.8.35|<5.4.3,>=5.0",
+                "symfony/console": "<3.4"
+            },
+            "require-dev": {
+                "ext-iconv": "*",
+                "symfony/console": "~3.4|~4.0",
+                "symfony/process": "~3.4|~4.0",
+                "twig/twig": "~1.34|~2.4"
+            },
+            "suggest": {
+                "ext-iconv": "To convert non-UTF-8 strings to UTF-8 (or symfony/polyfill-iconv in case ext-iconv cannot be used).",
+                "ext-intl": "To show region name in time zone dump",
+                "symfony/console": "To use the ServerDumpCommand and/or the bin/var-dump-server script"
+            },
+            "bin": [
+                "Resources/bin/var-dump-server"
+            ],
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "4.3-dev"
+                }
+            },
+            "autoload": {
+                "files": [
+                    "Resources/functions/dump.php"
+                ],
+                "psr-4": {
+                    "Symfony\\Component\\VarDumper\\": ""
+                },
+                "exclude-from-classmap": [
+                    "/Tests/"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Nicolas Grekas",
+                    "email": "p@tchwork.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Symfony mechanism for exploring and dumping PHP variables",
+            "homepage": "https://symfony.com",
+            "keywords": [
+                "debug",
+                "dump"
+            ],
+            "time": "2019-07-27T06:42:46+00:00"
+        },
+        {
             "name": "symfony/var-exporter",
             "version": "v4.3.3",
             "source": {
@@ -6943,82 +7033,6 @@
             ],
             "description": "A pack for functional and end-to-end testing within a Symfony app",
             "time": "2019-06-21T06:27:32+00:00"
-        },
-        {
-            "name": "symfony/var-dumper",
-            "version": "v4.3.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/var-dumper.git",
-                "reference": "e4110b992d2cbe198d7d3b244d079c1c58761d07"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/var-dumper/zipball/e4110b992d2cbe198d7d3b244d079c1c58761d07",
-                "reference": "e4110b992d2cbe198d7d3b244d079c1c58761d07",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^7.1.3",
-                "symfony/polyfill-mbstring": "~1.0",
-                "symfony/polyfill-php72": "~1.5"
-            },
-            "conflict": {
-                "phpunit/phpunit": "<4.8.35|<5.4.3,>=5.0",
-                "symfony/console": "<3.4"
-            },
-            "require-dev": {
-                "ext-iconv": "*",
-                "symfony/console": "~3.4|~4.0",
-                "symfony/process": "~3.4|~4.0",
-                "twig/twig": "~1.34|~2.4"
-            },
-            "suggest": {
-                "ext-iconv": "To convert non-UTF-8 strings to UTF-8 (or symfony/polyfill-iconv in case ext-iconv cannot be used).",
-                "ext-intl": "To show region name in time zone dump",
-                "symfony/console": "To use the ServerDumpCommand and/or the bin/var-dump-server script"
-            },
-            "bin": [
-                "Resources/bin/var-dump-server"
-            ],
-            "type": "library",
-            "extra": {
-                "branch-alias": {
-                    "dev-master": "4.3-dev"
-                }
-            },
-            "autoload": {
-                "files": [
-                    "Resources/functions/dump.php"
-                ],
-                "psr-4": {
-                    "Symfony\\Component\\VarDumper\\": ""
-                },
-                "exclude-from-classmap": [
-                    "/Tests/"
-                ]
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Nicolas Grekas",
-                    "email": "p@tchwork.com"
-                },
-                {
-                    "name": "Symfony Community",
-                    "homepage": "https://symfony.com/contributors"
-                }
-            ],
-            "description": "Symfony mechanism for exploring and dumping PHP variables",
-            "homepage": "https://symfony.com",
-            "keywords": [
-                "debug",
-                "dump"
-            ],
-            "time": "2019-07-27T06:42:46+00:00"
         },
         {
             "name": "symfony/web-profiler-bundle",

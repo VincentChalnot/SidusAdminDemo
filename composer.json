@@ -29,6 +29,7 @@
         "symfony/yaml": "4.3.*",
         "symfony/templating": "4.3.*",
 
+        "sidus/base-bundle": "1.1.*",
         "sidus/admin-bundle": "dev-v3.0-dev",
         "sidus/datagrid-bundle": "dev-v3.0-dev",
         "sidus/filter-bundle": "dev-v3.0-dev",
