@@ -1,0 +1,2 @@
+App\Action\HomeAction:
+    path: /

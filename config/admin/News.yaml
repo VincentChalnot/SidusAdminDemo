@@ -1,0 +1,24 @@
+sidus_admin:
+    configurations:
+        News:
+            entity: App\Entity\News
+            controller_pattern:
+                - 'Sidus\AdminBundle\Action\{{Action}}Action'
+            template_pattern:
+                - 'Action/{{action}}.{{format}}.twig'
+                - '@SidusAdmin/Action/{{action}}.{{format}}.twig'
+            form_type: App\Form\Type\NewsType
+            prefix: /news
+            actions:
+                list:
+                    path: /
+                create:
+                    path: /create
+                read:
+                    path: /read/{id}
+                edit:
+                    path: /edit/{id}
+                delete:
+                    path: /delete/{id}
+            options:
+                icon: address-book

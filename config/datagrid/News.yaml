@@ -1,0 +1,59 @@
+sidus_data_grid:
+    configurations:
+        News:
+            columns:
+                id:
+                    label: '#'
+                title:
+                    template: 'Datagrid/clickable.html.twig'
+                publicationDate: ~
+                publicationStatus:
+                    template: 'Datagrid/badge.html.twig'
+                author:
+                    sort_column: author.fullName
+                categories: ~
+                actions:
+                    template: 'Datagrid/actions.html.twig'
+            actions:
+                create:
+                    form_type: Sidus\AdminBundle\Form\Type\AdminLinkType
+                    admin_action: create
+                    label: Create
+                    attr:
+                        class: btn btn-primary
+
+            # The query_handler configuration key must contain a valid Sidus/FilterBundle configuration definition
+            # See # See https://github.com/VincentChalnot/SidusFilterBundle for more information
+            query_handler:
+                provider: doctrine
+                options:
+                    entity: App\Entity\News
+                sortable:
+                    - id
+                    - title
+                    - publicationDate
+                    - publicationStatus
+                    - author.fullName
+                default_sort:
+                    publicationDate: DESC
+                filters:
+                    title: ~
+                    author:
+                        attributes: [author.fullName, author.email]
+                    publicationDate:
+                        type: date_range
+                    publicationStatus:
+                        type: choice
+                        default: [validated, published]
+                        form_options:
+                            multiple: true
+                            expanded: true
+                    categories:
+                        type: choice
+                        form_options:
+                            multiple: true
+                        attributes: [categories.title]
+                    deleted:
+                        default: 0
+                        options:
+                            hidden: true
