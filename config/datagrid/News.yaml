@@ -48,11 +48,17 @@ sidus_data_grid:
                         form_options:
                             multiple: true
                             expanded: true
+                            choices:
+                                Draft: draft
+                                Rejected: rejected
+                                Validated: validated
+                                Published: published
+                                Unpublished: unpublished
                     categories:
+                        attributes: [categories.title]
                         type: choice
                         form_options:
                             multiple: true
-                        attributes: [categories.title]
                     deleted:
                         default: 0
                         options:

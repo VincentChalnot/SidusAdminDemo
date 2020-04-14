@@ -6,7 +6,6 @@ services:
         working_dir: /var/www/current
         depends_on:
             - mysql
-            - mailcatcher
         ports:
             - 80:80
         volumes:
@@ -17,8 +16,8 @@ services:
             APP_ENV: dev
             APP_SECRET: adc3f69b4b8262565f7abb9513de7f36
             DATABASE_URL: 'mysql://symfony:symfony@mysql:3306/symfony'
-            MAILER_URL: 'smtp://mailcatcher:1025'
             PHP_IDE_CONFIG: 'serverName=sidusadmindemo-cli'
+            COMPOSER_MEMORY_LIMIT: -1
         extra_hosts:
             - "host.docker.internal:172.17.0.1"
 
@@ -33,11 +32,6 @@ services:
             MYSQL_DATABASE: symfony
             MYSQL_USER: symfony
             MYSQL_PASSWORD: symfony
-
-    mailcatcher:
-        image: zolweb/docker-mailcatcher:latest
-        ports:
-            - 1080:1080
 
 volumes:
     volume_mysql:

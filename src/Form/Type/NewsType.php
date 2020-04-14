@@ -4,6 +4,7 @@ namespace App\Form\Type;
 
 use App\Entity\News;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
@@ -24,7 +25,16 @@ class NewsType extends AbstractType
             ->add('slug', TextType::class, ['disabled' => true])
             ->add('title', TextType::class)
             ->add('content', TextareaType::class)
-            ->add('publicationDate', DateTimeType::class);
+            ->add('publicationDate', DateTimeType::class)
+            ->add('publicationStatus', ChoiceType::class, [
+                'choices' => [
+                    'Draft' => 'draft',
+                    'Rejected' => 'rejected',
+                    'Validated' => 'validated',
+                    'Published' => 'published',
+                    'Unpublished' => 'unpublished',
+                ],
+            ]);
     }
 
     /**

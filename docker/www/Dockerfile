@@ -9,23 +9,24 @@ RUN add-apt-repository ppa:ondrej/php
 RUN apt-get update && apt-get install -y \
     mariadb-client \
     nginx \
-    php7.2-fpm \
-    php7.2-cli \
-    php7.2-intl \
-    php7.2-xml \
-    php7.2-zip \
-    php7.2-mbstring \
-    php7.2-gd \
-    php7.2-mysql \
-    php7.2-curl \
+    php7.4-fpm \
+    php7.4-cli \
+    php7.4-intl \
+    php7.4-xml \
+    php7.4-zip \
+    php7.4-mbstring \
+    php7.4-gd \
+    php7.4-mysql \
+    php7.4-curl \
+    php7.4-apcu \
     php-xdebug
 
 # Fix fastcgi params in nginx
 COPY nginx/snippets/php-fpm.conf /etc/nginx/snippets/php-fpm.conf
 
 # Enabling our custom configs
-COPY php/mods-available/symfony.ini /etc/php/7.2/mods-available/symfony.ini
-COPY php/mods-available/xdebug.ini /etc/php/7.2/mods-available/xdebug.ini
+COPY php/mods-available/symfony.ini /etc/php/7.4/mods-available/symfony.ini
+COPY php/mods-available/xdebug.ini /etc/php/7.4/mods-available/xdebug.ini
 RUN phpenmod symfony
 # xdebug is already enabled by default
 
