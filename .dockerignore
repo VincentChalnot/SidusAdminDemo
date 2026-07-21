@@ -1,0 +1,31 @@
+# Keep the FrankenPHP build context small. The dev image never COPYs the app
+# source (it's bind-mounted at runtime via `.:/app` in compose.yaml); the
+# prod image (frankenphp/Dockerfile's frankenphp_prod stage) COPYs an
+# explicit, minimal file list instead of relying on this file for that - it
+# only matters here for context-upload size and keeping stray local/CI files
+# out of the build cache key.
+.git/
+.github/
+.gitattributes
+.gitignore
+.idea/
+.dockerignore
+.phpunit.cache/
+
+**/*.log
+**/*.md
+
+coding-standard/
+var/
+vendor/
+node_modules/
+tests/
+
+compose*.yaml
+compose*.yml
+Dockerfile
+frankenphp/Dockerfile
+
+.env.local
+.env.*.local
+.env.test

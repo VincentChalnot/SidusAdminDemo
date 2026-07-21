@@ -5,16 +5,11 @@ namespace App\Utils;
 use Transliterator;
 
 /**
- * Utility to manipulate strings
+ * Utility to manipulate strings.
  */
 class StringUtils
 {
-    /**
-     * @param string $value
-     *
-     * @return string
-     */
-    public static function slugify(string $value)
+    public static function slugify(string $value): string
     {
         $transliterator = Transliterator::create('NFD; [:Nonspacing Mark:] Remove; NFC');
         $string = $transliterator->transliterate($value);

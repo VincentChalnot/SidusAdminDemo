@@ -3,7 +3,7 @@ twig:
     debug: '%kernel.debug%'
     strict_variables: '%kernel.debug%'
     form_themes:
-        - 'bootstrap_4_layout.html.twig'
+        - 'form/bulma_layout.html.twig'
         - '@SidusDataGrid/Form/bootstrap4.html.twig'
     globals:
         statusBadge:

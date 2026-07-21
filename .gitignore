@@ -1,8 +1,10 @@
-
+/.idea
+/.env
 ###> symfony/framework-bundle ###
 /.env.local
 /.env.local.php
 /.env.*.local
+/config/reference.php
 /public/bundles/
 /var/
 /vendor/
@@ -10,6 +12,7 @@
 
 ###> symfony/phpunit-bridge ###
 .phpunit
+.phpunit.cache
 .phpunit.result.cache
 /phpunit.xml
 ###< symfony/phpunit-bridge ###
@@ -23,4 +26,12 @@
 .idea/dataSources
 .idea/dataSources.xml
 
-/docker/docker-compose-override.yml
+###> symfony/asset-mapper ###
+/public/assets/
+/assets/vendor/
+###< symfony/asset-mapper ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###

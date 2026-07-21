@@ -20,7 +20,7 @@ sidus_data_grid:
                     admin_action: create
                     label: Create
                     attr:
-                        class: btn btn-primary
+                        class: button is-primary
 
             # The query_handler configuration key must contain a valid Sidus/FilterBundle configuration definition
             # See # See https://github.com/VincentChalnot/SidusFilterBundle for more information

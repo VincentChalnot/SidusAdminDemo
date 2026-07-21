@@ -1,0 +1,32 @@
+# This container is never reached directly: an external Traefik reverse proxy
+# (running outside this compose project, on the shared `${TRAEFIK_NETWORK}`
+# docker network) terminates TLS and forwards to this service in plain HTTP.
+#
+# The site address is a bare ":80" (port only, no host) on purpose: Traefik
+# does host-based routing externally via its own labels/rules (see
+# compose.yaml), so Caddy here must accept any Host header. Anything else in
+# the address position — e.g. "{$SERVER_NAME:80}" without a leading colon —
+# gets parsed by Caddy as a *hostname* "80", which both (a) makes the site
+# only match requests with a literal "Host: 80" header, matching nothing real,
+# and (b) used to trigger a bogus Let's Encrypt/ACME certificate request for
+# that "hostname" before `auto_https off` was added below.
+{
+	auto_https off
+}
+
+:80 {
+	root * /app/public
+	encode zstd br gzip
+
+	# Disable Topics tracking unless explicitly enabled: https://github.com/jkarlin/topics
+	header ?Permissions-Policy "browsing-topics=()"
+
+	# php_server is the FrankenPHP all-in-one directive: it sets up the
+	# index.php front-controller rewrite and static file serving.
+	php_server {
+		# Uncomment to run Symfony in worker mode for higher throughput
+		# (keeps the app booted in memory between requests).
+		# See https://frankenphp.dev/docs/worker/ and https://symfony.com/doc/current/frankenphp.html
+		# worker ./public/index.php
+	}
+}

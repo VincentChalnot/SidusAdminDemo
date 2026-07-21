@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Repository\NewsRepository;
 use App\Utils\StringUtils;
 use DateTime;
 use DateTimeInterface;
@@ -11,117 +12,56 @@ use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * @ORM\Table(name="news")
- * @ORM\Entity()
- *
- * @UniqueEntity(fields={"slug"})
- */
+#[ORM\Table(name: 'news')]
+#[ORM\Entity(repositoryClass: NewsRepository::class)]
+#[UniqueEntity(fields: ['slug'])]
 class News
 {
-    /**
-     * @var int|null
-     *
-     * @ORM\Id
-     * @ORM\Column(name="id", type="integer")
-     * @ORM\GeneratedValue(strategy="AUTO")
-     */
-    protected $id;
+    #[ORM\Id]
+    #[ORM\Column(name: 'id', type: 'integer')]
+    #[ORM\GeneratedValue(strategy: 'AUTO')]
+    protected ?int $id = null;
 
-    /**
-     * @var string|null
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="string", unique=true, length=191)
-     */
-    protected $slug;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'string', unique: true, length: 191)]
+    protected ?string $slug = null;
 
-    /**
-     * @var string|null
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="string")
-     */
-    protected $title;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'string')]
+    protected ?string $title = null;
 
-    /**
-     * @var string|null
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="text")
-     */
-    protected $content;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'text')]
+    protected ?string $content = null;
 
-    /**
-     * @var DateTimeInterface|null
-     *
-     * @ORM\Column(type="datetime", nullable=true)
-     */
-    protected $publicationDate;
+    #[ORM\Column(type: 'datetime', nullable: true)]
+    protected ?DateTimeInterface $publicationDate = null;
 
-    /**
-     * @var string|null
-     *
-     * @Assert\NotBlank()
-     * @Assert\Choice({
-     *     "draft",
-     *     "rejected",
-     *     "validated",
-     *     "published",
-     *     "unpublished",
-     * })
-     *
-     * @ORM\Column(type="string")
-     */
-    protected $publicationStatus = 'draft';
+    #[Assert\NotBlank]
+    #[Assert\Choice(['draft', 'rejected', 'validated', 'published', 'unpublished'])]
+    #[ORM\Column(type: 'string')]
+    protected string $publicationStatus = 'draft';
 
-    /**
-     * @var DateTimeInterface
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="datetime")
-     */
-    protected $createdAt;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'datetime')]
+    protected DateTimeInterface $createdAt;
 
-    /**
-     * @var DateTimeInterface
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="datetime")
-     */
-    protected $updatedAt;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'datetime')]
+    protected DateTimeInterface $updatedAt;
 
-    /**
-     * @var Author|null
-     *
-     * @ORM\ManyToOne(targetEntity="App\Entity\Author", cascade={"detach"}, fetch="EAGER")
-     * @ORM\JoinColumn(nullable=true)
-     */
-    protected $author;
+    #[ORM\ManyToOne(targetEntity: Author::class, cascade: ['detach'], fetch: 'EAGER')]
+    #[ORM\JoinColumn(nullable: true)]
+    protected ?Author $author = null;
 
-    /**
-     * @var Category[]|Collection|iterable
-     *
-     * @ORM\ManyToMany(targetEntity="App\Entity\Category")
-     * @ORM\JoinTable(name="news_category")
-     */
-    protected $categories;
+    /** @var Collection<int, Category> */
+    #[ORM\ManyToMany(targetEntity: Category::class)]
+    #[ORM\JoinTable(name: 'news_category')]
+    protected Collection $categories;
 
-    /**
-     * @var bool
-     *
-     * @ORM\Column(type="boolean")
-     */
-    protected $deleted = false;
+    #[ORM\Column(type: 'boolean')]
+    protected bool $deleted = false;
 
-    /**
-     * Setting initial dates
-     */
     public function __construct()
     {
         $this->createdAt = new DateTime();
@@ -129,41 +69,26 @@ class News
         $this->categories = new ArrayCollection();
     }
 
-    /**
-     * @return int|null
-     */
     public function getId(): ?int
     {
         return $this->id;
     }
 
-    /**
-     * @return string|null
-     */
     public function getSlug(): ?string
     {
         return $this->slug;
     }
 
-    /**
-     * @param string $slug
-     */
     public function setSlug(string $slug): void
     {
         $this->slug = $slug;
     }
 
-    /**
-     * @return string|null
-     */
     public function getTitle(): ?string
     {
         return $this->title;
     }
 
-    /**
-     * @param string $title
-     */
     public function setTitle(string $title): void
     {
         $this->title = $title;
@@ -172,105 +97,67 @@ class News
         }
     }
 
-    /**
-     * @return string|null
-     */
     public function getContent(): ?string
     {
         return $this->content;
     }
 
-    /**
-     * @param string $content
-     */
     public function setContent(string $content): void
     {
         $this->content = $content;
     }
 
-    /**
-     * @return DateTimeInterface|null
-     */
     public function getPublicationDate(): ?DateTimeInterface
     {
         return $this->publicationDate;
     }
 
-    /**
-     * @param DateTimeInterface|null $publicationDate
-     */
     public function setPublicationDate(?DateTimeInterface $publicationDate): void
     {
         $this->publicationDate = $publicationDate;
     }
 
-    /**
-     * @return string
-     */
     public function getPublicationStatus(): string
     {
         return $this->publicationStatus;
     }
 
-    /**
-     * @param string $publicationStatus
-     */
     public function setPublicationStatus(string $publicationStatus): void
     {
         $this->publicationStatus = $publicationStatus;
     }
 
-    /**
-     * @return DateTimeInterface
-     */
     public function getCreatedAt(): DateTimeInterface
     {
         return $this->createdAt;
     }
 
-    /**
-     * @return DateTimeInterface
-     */
     public function getUpdatedAt(): DateTimeInterface
     {
         return $this->updatedAt;
     }
 
-    /**
-     * @param DateTimeInterface $updatedAt
-     */
     public function setUpdatedAt(DateTimeInterface $updatedAt): void
     {
         $this->updatedAt = $updatedAt;
     }
 
-    /**
-     * @return Author|null
-     */
     public function getAuthor(): ?Author
     {
         return $this->author;
     }
 
-    /**
-     * @param Author $author
-     */
     public function setAuthor(Author $author): void
     {
         $this->author = $author;
     }
 
-    /**
-     * @return Category[]|Collection|iterable
-     */
-    public function getCategories(): iterable
+    /** @return Collection<int, Category> */
+    public function getCategories(): Collection
     {
         return $this->categories;
     }
 
-    /**
-     * @param Category $category
-     */
     public function addCategory(Category $category): void
     {
         if (!$this->categories->contains($category)) {
@@ -278,39 +165,23 @@ class News
         }
     }
 
-    /**
-     * @param Category $category
-     */
     public function removeCategory(Category $category): void
     {
-        if ($this->categories->contains($category)) {
-            $this->categories->removeElement($category);
-        }
+        $this->categories->removeElement($category);
     }
 
-    /**
-     * @return bool
-     */
     public function isDeleted(): bool
     {
         return $this->deleted;
     }
 
-    /**
-     * @param bool $deleted
-     */
     public function setDeleted(bool $deleted): void
     {
         $this->deleted = $deleted;
     }
 
-    /**
-     * @return string
-     */
-    public function __toString()
+    public function __toString(): string
     {
-        /** @noinspection ReturnNullInspection */
-
         return (string) $this->getTitle();
     }
 }

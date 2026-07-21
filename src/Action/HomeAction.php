@@ -2,18 +2,16 @@
 
 namespace App\Action;
 
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\Template;
+use Symfony\Bridge\Twig\Attribute\Template;
+use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Displays homepage
+ * Displays homepage.
  */
 class HomeAction
 {
-    /**
-     * @Template("Action/home.html.twig")
-     *
-     * @return array
-     */
+    #[Route('/', name: 'app_home')]
+    #[Template('Action/home.html.twig')]
     public function __invoke(): array
     {
         return [];

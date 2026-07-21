@@ -1,28 +1,74 @@
-{% extends '@SidusAdmin/base.html.twig' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Sidus/AdminBundle Demo{% endblock %}</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="{{ asset('styles/bulma.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar is-light" role="navigation" aria-label="main navigation">
+        <div class="container">
+            <div class="navbar-brand">
+                <a class="navbar-item has-text-weight-bold" href="{{ path('app_home') }}">
+                    <span class="icon"><i class="fas fa-shield-halved"></i></span>
+                    <span>&nbsp;Sidus/AdminBundle</span>
+                </a>
 
-{% block title %}Sidus/AdminBundle Demo{% endblock %}
+                <a role="button" class="navbar-burger" aria-label="menu" aria-expanded="false"
+                   data-target="main-navbar">
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                    <span aria-hidden="true"></span>
+                </a>
+            </div>
 
-{% block body %}
-    <a href="https://github.com/VincentChalnot/SidusAdminDemo">
-        <img class="fixed-top" style="left:auto"
-             src="https://s3.amazonaws.com/github/ribbons/forkme_right_darkblue_121621.png" alt="Fork me on GitHub">
-    </a>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <a class="navbar-brand" href="{{ path('App\\Action\\HomeAction') }}">Sidus/AdminBundle</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
+            <div id="main-navbar" class="navbar-menu">
+                <div class="navbar-start">
+                    <a class="navbar-item" href="{{ path('app_home') }}">Home</a>
+                    <a class="navbar-item" href="{{ admin_path('News', 'list') }}">
+                        <span class="icon"><i class="fas fa-address-book"></i></span>
+                        <span>&nbsp;News</span>
+                    </a>
+                </div>
 
-        <div class="collapse navbar-collapse" id="navbarSupportedContent">
-            <ul class="navbar-nav mr-auto">
-                <li class="nav-item active">
-                    <a class="nav-link" href="{{ path('App\\Action\\HomeAction') }}">Home</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ admin_path('News', 'list') }}">News</a>
-                </li>
-            </ul>
+                <div class="navbar-end">
+                    <div class="navbar-item">
+                        <a class="button is-dark" href="https://github.com/VincentChalnot/SidusAdminDemo">
+                            <span class="icon"><i class="fab fa-github"></i></span>
+                            <span>Fork me on GitHub</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </nav>
-    {{ parent() }}
-{% endblock %}
+
+    <section class="section">
+        <div class="container is-wide">
+            {% block body %}
+                {% block container %}{% endblock %}
+            {% endblock %}
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="container">
+            <div class="content has-text-centered">
+                <p>
+                    <strong>Sidus/AdminBundle Demo</strong> &mdash; built with
+                    <a href="https://symfony.com">Symfony</a>,
+                    <a href="https://github.com/VincentChalnot/SidusAdminBundle">Sidus/AdminBundle</a> and
+                    <a href="https://bulma.io">Bulma</a>.
+                </p>
+            </div>
+        </div>
+    </footer>
+
+</body>
+</html>

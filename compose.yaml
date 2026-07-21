@@ -1,0 +1,58 @@
+services:
+  php:
+    build:
+      context: .
+      dockerfile: frankenphp/Dockerfile
+      target: frankenphp_dev
+      args:
+        PHP_VERSION: "${PHP_VERSION:-8.4}"
+        WITH_XDEBUG: "${WITH_XDEBUG:-0}"
+    restart: unless-stopped
+    working_dir: /app
+    expose:
+      - "80"
+    environment:
+      COMPOSER_MEMORY_LIMIT: -1
+      APP_ENV: "${APP_ENV:-dev}"
+      APP_SECRET: "${APP_SECRET:-ThisTokenIsNotSecretChangeIt}"
+      DATABASE_URL: "mysql://${MYSQL_USER:-symfony}:${MYSQL_PASSWORD:-symfony}@mysql:3306/${MYSQL_DATABASE:-symfony}?serverVersion=mariadb-${MARIADB_VERSION:-11.4}.0"
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+    volumes:
+      - .:/app
+      - php_var:/app/var
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - mysql
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sidus_admin_demo.tls=true"
+      - "traefik.http.services.sidus_admin_demo.loadbalancer.server.port=80"
+      - "traefik.http.routers.sidus_admin_demo.tls.certresolver=${CERT_RESOLVER:-gandi}"
+      - "traefik.http.routers.sidus_admin_demo.rule=Host(`${APP_DOMAIN:-admin-demo.local.sidus.fr}`)"
+
+  mysql:
+    image: mariadb:${MARIADB_VERSION:-11.4}
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${MYSQL_DATABASE:-symfony}"
+      MYSQL_USER: "${MYSQL_USER:-symfony}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD:-symfony}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD:-root}"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+networks:
+  default: {}
+  traefik:
+    external: true
+    name: "${TRAEFIK_NETWORK:-proxy}"
+
+volumes:
+  php_var:
+  mysql_data:
+  caddy_data:
+  caddy_config:

@@ -10,3 +10,12 @@ services:
     _defaults:
         autowire: true      # Automatically injects dependencies in your services.
         autoconfigure: true # Automatically registers your services as commands, event subscribers, etc.
+
+    # Autoregister everything else under src/ (repositories, utils, entities'
+    # supporting classes, ...). Action and Command services get their own,
+    # more specific resources below/elsewhere, which take precedence.
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/Kernel.php'
+            - '../src/Entity/'

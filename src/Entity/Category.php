@@ -2,81 +2,50 @@
 
 namespace App\Entity;
 
+use App\Repository\CategoryRepository;
 use App\Utils\StringUtils;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints as Assert;
 
-/**
- * @ORM\Table(name="category")
- * @ORM\Entity()
- *
- * @UniqueEntity(fields={"slug"})
- */
+#[ORM\Table(name: 'category')]
+#[ORM\Entity(repositoryClass: CategoryRepository::class)]
+#[UniqueEntity(fields: ['slug'])]
 class Category
 {
-    /**
-     * @var int
-     *
-     * @ORM\Id
-     * @ORM\Column(name="id", type="integer")
-     * @ORM\GeneratedValue(strategy="AUTO")
-     */
-    protected $id;
+    #[ORM\Id]
+    #[ORM\Column(name: 'id', type: 'integer')]
+    #[ORM\GeneratedValue(strategy: 'AUTO')]
+    protected ?int $id = null;
 
-    /**
-     * @var string
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="string", unique=true, length=191)
-     */
-    protected $slug;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'string', unique: true, length: 191)]
+    protected ?string $slug = null;
 
-    /**
-     * @var string
-     *
-     * @Assert\NotBlank()
-     *
-     * @ORM\Column(type="string")
-     */
-    protected $title;
+    #[Assert\NotBlank]
+    #[ORM\Column(type: 'string')]
+    protected string $title = '';
 
-    /**
-     * @return int
-     */
-    public function getId(): int
+    public function getId(): ?int
     {
         return $this->id;
     }
 
-    /**
-     * @return string
-     */
-    public function getSlug(): string
+    public function getSlug(): ?string
     {
         return $this->slug;
     }
 
-    /**
-     * @param string $slug
-     */
     public function setSlug(string $slug): void
     {
         $this->slug = $slug;
     }
 
-    /**
-     * @return string
-     */
     public function getTitle(): string
     {
         return $this->title;
     }
 
-    /**
-     * @param string $title
-     */
     public function setTitle(string $title): void
     {
         $this->title = $title;
@@ -85,10 +54,7 @@ class Category
         }
     }
 
-    /**
-     * @return string
-     */
-    public function __toString()
+    public function __toString(): string
     {
         return $this->getTitle();
     }

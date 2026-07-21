@@ -5,45 +5,30 @@ namespace App\Command;
 use App\Entity\Author;
 use App\Entity\Category;
 use App\Entity\News;
-use Doctrine\Common\Persistence\ManagerRegistry;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\Persistence\ManagerRegistry;
 use Faker\Factory;
+use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 use UnexpectedValueException;
-use function count;
 
 /**
- * Load database with test data
+ * Load database with test data.
  */
+#[AsCommand(name: 'app:fixtures:init', description: 'Load the database with demo fixtures')]
 class InitFixturesCommand extends Command
 {
-    /** @var ManagerRegistry */
-    protected $doctrine;
-
-    /** @var ValidatorInterface */
-    protected $validator;
-
-    /**
-     * @param ManagerRegistry    $doctrine
-     * @param ValidatorInterface $validator
-     */
-    public function __construct(ManagerRegistry $doctrine, ValidatorInterface $validator)
-    {
-        $this->doctrine = $doctrine;
-        $this->validator = $validator;
-        parent::__construct('app:fixtures:init');
+    public function __construct(
+        private readonly ManagerRegistry $doctrine,
+        private readonly ValidatorInterface $validator,
+    ) {
+        parent::__construct();
     }
 
-    /**
-     * @param InputInterface  $input
-     * @param OutputInterface $output
-     *
-     * @return int|null|void
-     */
-    protected function execute(InputInterface $input, OutputInterface $output)
+    protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $em = $this->doctrine->getManagerForClass(News::class);
         if (!$em instanceof EntityManagerInterface) {
@@ -55,9 +40,9 @@ class InitFixturesCommand extends Command
         $authors = [];
         for ($i = 0; $i < 70; ++$i) {
             $author = new Author();
-            $author->setFirstName($faker->firstName);
-            $author->setLastName($faker->lastName);
-            $author->setEmail($faker->email);
+            $author->setFirstName($faker->firstName());
+            $author->setLastName($faker->lastName());
+            $author->setEmail($faker->email());
 
             $errors = $this->validator->validate($author);
             if (0 === count($errors)) {
@@ -96,13 +81,13 @@ class InitFixturesCommand extends Command
                 )
             );
             $news->setAuthor($faker->randomElement($authors));
-            for ($j = 0; $j < $faker->randomNumber(1); ++$j) {
+            for ($j = 0; $j < $faker->randomDigit(); ++$j) {
                 $news->addCategory($faker->randomElement($categories));
             }
             $news->setPublicationDate(
                 $faker->dateTimeInInterval('-4 years', '+5 years')
             );
-            if ($faker->randomNumber(3) > 95) {
+            if ($faker->numberBetween(0, 999) > 95) {
                 $news->setDeleted(true);
             }
 
@@ -114,5 +99,7 @@ class InitFixturesCommand extends Command
         $em->flush();
 
         $output->writeln('Fixtures load correctly');
+
+        return Command::SUCCESS;
     }
 }
