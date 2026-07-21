@@ -58,12 +58,19 @@ Production image
 
 `frankenphp/Dockerfile` has a `frankenphp_prod` target (`composer install --no-dev` with an
 optimized/classmap-authoritative autoloader, prod `php.ini`, and the Symfony prod cache —
-container, routes, Twig, `assets:install`/`importmap:install` — pre-warmed into the image, so
-containers boot instantly with no first-request compile cost). `compose.yaml` only builds/uses
-`frankenphp_dev` — this project deliberately has no prod `compose.yaml` (see the top-level ask
-that shaped this repo's Docker setup); deploy the `frankenphp_prod` image directly, or build a
-deployment-specific compose/manifest around it, injecting the same runtime environment variables
-`compose.yaml` lists below (`APP_SECRET`, `DATABASE_URL`, `TRUSTED_PROXIES`, ...) for real.
+container, routes, Twig, `assets:install`/`importmap:install`/`asset-map:compile` — pre-warmed
+into the image, so containers boot instantly with no first-request compile cost). `compose.yaml`
+only builds/uses `frankenphp_dev` — this project deliberately has no prod `compose.yaml` (see the
+top-level ask that shaped this repo's Docker setup); deploy the `frankenphp_prod` image directly,
+or build a deployment-specific compose/manifest around it, injecting the same runtime environment
+variables `compose.yaml` lists below (`APP_SECRET`, `DATABASE_URL`, `TRUSTED_PROXIES`, ...) for
+real.
+
+At container start, `frankenphp/docker-entrypoint.sh` waits for the database to be reachable,
+runs `doctrine:migrations:migrate --no-interaction`, then `app:fixtures:init` (a no-op if data is
+already present — safe to restart the container without piling up duplicate demo data) before
+handing off to FrankenPHP. This only runs for the actual `frankenphp` server CMD, not for
+one-off `bin/console ...` exec's into a running container.
 
 [`.github/workflows/docker-image.yml`](.github/workflows/docker-image.yml) builds that target on
 every push/PR and pushes it to `ghcr.io/vincentchalnot/sidusadmindemo` on pushes to `master` and

@@ -1,5 +1,34 @@
 # Changelog
 
+## Production image fixes — 2026-07-21
+
+Two gaps in the `frankenphp_prod` build/runtime:
+
+- **Missing `asset-map:compile` at build time**: the image ran `assets:install`/`importmap:install`
+  (via composer's auto-scripts) but never compiled/versioned the AssetMapper assets themselves
+  (`app.js`, `app.css`, `bulma.css`) into `public/assets/`. AssetMapper only resolves assets
+  on the fly in `dev`; without this, `prod` requests for `{{ asset(...) }}`/`importmap()` output
+  would 404. Added an explicit `RUN php bin/console asset-map:compile` build step (same
+  build-time-only placeholder env vars as the rest of the build). Verified: hashed URLs
+  (`/assets/app--H0CbZF.js`, `/assets/styles/app-m0m9lv7.css`) now present in the rendered HTML
+  and served with `manifest.json`/`importmap.json` written under `public/assets/`.
+- **No migrations/fixtures at container start**: the prod image had no entrypoint, so a freshly
+  deployed container serving against an empty database would 500 on every route (no schema) with
+  no automated way to bootstrap it. Added `frankenphp/docker-entrypoint.sh`: waits for the
+  database to become reachable (`dbal:run-sql 'SELECT 1'`, bounded retry loop), runs
+  `doctrine:migrations:migrate --no-interaction`, then `app:fixtures:init` - only ahead of the
+  actual `frankenphp` server CMD, not for one-off `bin/console` execs into a running container.
+- `InitFixturesCommand` (`app:fixtures:init`) made idempotent (early-returns if `News` already
+  has rows) so the entrypoint - and anyone re-running it manually - can't pile up duplicate demo
+  data on every container restart. Verified: 1000 `news` rows after first boot, still exactly
+  1000 after a full container restart, with the command logging "Fixtures already loaded,
+  skipping." instead of re-inserting.
+
+Verified end-to-end against a real MariaDB container over a plain Docker network, from a
+completely empty database, through both the initial boot (wait → migrate → fixtures → serving)
+and a restart (idempotent no-ops both times), plus the existing dev stack (`compose.yaml`)
+re-verified unaffected by the `InitFixturesCommand` change.
+
 ## `sidus/admin-bundle` and `sidus/filter-bundle` tag immutability fixes — 2026-07-21
 
 Packagist blocked three more updates for the same reason as the `sidus/datagrid-bundle` incident

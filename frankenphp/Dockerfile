@@ -61,9 +61,11 @@ CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile", "--watch"]
 
 # Prod FrankenPHP image: composer install --no-dev with an optimized,
 # classmap-authoritative autoloader, and the Symfony prod cache (container,
-# routes, Twig, `assets:install`/`importmap:install`) pre-warmed into the
-# image itself so containers boot instantly with no first-request compile
-# cost and no writable source volume.
+# routes, Twig, `assets:install`/`importmap:install`/`asset-map:compile`)
+# pre-warmed into the image itself so containers boot instantly with no
+# first-request compile cost and no writable source volume. Migrations and
+# demo fixtures run at container start (docker-entrypoint.sh) since they
+# need a real, reachable database that doesn't exist at build time.
 FROM frankenphp_base AS frankenphp_prod
 
 ENV APP_ENV=prod
@@ -98,4 +100,20 @@ RUN --mount=type=cache,target=/root/.composer/cache,sharing=locked \
 	TRUSTED_PROXIES=127.0.0.1 \
 	composer install --no-dev --no-progress --no-interaction --optimize-autoloader --classmap-authoritative
 
+# composer install's auto-scripts already ran importmap:install (downloads
+# the vendored JS packages); asset-map:compile is the separate step that
+# actually compiles/versions everything AssetMapper serves (app.js, Bulma,
+# FontAwesome, importmap entries) into public/assets/ for prod - AssetMapper
+# only resolves assets on the fly in dev, prod needs this pre-built.
+RUN APP_ENV=prod \
+	APP_SECRET=BuildTimePlaceholderNotARealSecret \
+	DATABASE_URL="mysql://symfony:symfony@127.0.0.1:3306/symfony?serverVersion=mariadb-11.4.0" \
+	TRUSTED_PROXIES=127.0.0.1 \
+	php bin/console asset-map:compile
+
+COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-entrypoint
+
+# Waits for the database, runs migrations, then loads demo fixtures
+# (idempotent - see InitFixturesCommand) before handing off to the CMD below.
+ENTRYPOINT ["docker-entrypoint"]
 CMD ["frankenphp", "run", "--config", "/etc/frankenphp/Caddyfile"]

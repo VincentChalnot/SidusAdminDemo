@@ -35,6 +35,12 @@ class InitFixturesCommand extends Command
             throw new UnexpectedValueException('No manager found');
         }
 
+        if ($em->getRepository(News::class)->count([]) > 0) {
+            $output->writeln('Fixtures already loaded, skipping.');
+
+            return Command::SUCCESS;
+        }
+
         $faker = Factory::create();
 
         $authors = [];
