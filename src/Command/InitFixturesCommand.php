@@ -93,7 +93,7 @@ class InitFixturesCommand extends Command
             $news->setPublicationDate(
                 $faker->dateTimeInInterval('-4 years', '+5 years')
             );
-            if ($faker->numberBetween(0, 999) > 95) {
+            if ($faker->numberBetween(0, 99) > 94) { // ~5% of the news are soft-deleted
                 $news->setDeleted(true);
             }
 
