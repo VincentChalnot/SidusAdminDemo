@@ -1,0 +1,211 @@
+name: CI
+
+# Pipeline: test -> image -> publish
+#
+#   test     PHP 8.4, composer install, lint, PHPUnit functional suite (SQLite).
+#   image    builds the `frankenphp_prod` target (GHA layer cache), loads it locally, starts it against a
+#            MariaDB service container and runs scripts/smoke.sh (healthz, home, list, filtered, sorted,
+#            paged pages, headers, and a replay of the sequence to catch state leaking between requests).
+#   publish  pushes the image to GHCR - only on pushes to `master` and on `vX.Y.Z` tags. Pull requests
+#            stop after `image`.
+on:
+  push:
+    branches: [master]
+    tags: ["v*.*.*"]
+  pull_request:
+    branches: [master]
+
+env:
+  REGISTRY: ghcr.io
+  # GHCR requires a lowercase image path; github.repository ("VincentChalnot/
+  # SidusAdminDemo") has uppercase letters, so it's hardcoded here rather
+  # than derived (this repo's name is fixed and known).
+  IMAGE_NAME: vincentchalnot/sidusadmindemo
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege by default; only the publish job gets `packages: write`.
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test (PHP 8.4)
+    runs-on: ubuntu-latest
+    env:
+      # Symfony never reads .env files (symfony/runtime disable_dotenv): the composer auto-scripts
+      # (cache:clear) need the app's environment variables. Throwaway values, nothing connects.
+      APP_SECRET: ci-not-a-secret
+      TRUSTED_PROXIES: 127.0.0.1
+      DATABASE_URL: sqlite:///%kernel.project_dir%/var/ci.db
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: ctype, iconv, intl, mbstring, pdo_sqlite, zip
+          tools: composer:v2
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer downloads
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Validate composer.json
+        run: composer validate --no-check-publish
+
+      - name: Lint config and templates
+        run: |
+          php bin/console lint:yaml config --parse-tags
+          php bin/console lint:twig templates
+
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  image:
+    name: Production image (build + smoke test)
+    needs: test
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4
+        env:
+          MARIADB_DATABASE: symfony
+          MARIADB_USER: symfony
+          MARIADB_PASSWORD: symfony
+          MARIADB_RANDOM_ROOT_PASSWORD: "1"
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Derive image labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Build the frankenphp_prod target (loaded locally, not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frankenphp/Dockerfile
+          target: frankenphp_prod
+          load: true
+          push: false
+          tags: sidusadmindemo:ci
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image hygiene (non-root, no composer/git/compiler, no build placeholders)
+        run: |
+          set -eu
+          user="$(docker image inspect sidusadmindemo:ci --format '{{.Config.User}}')"
+          echo "image user: $user"
+          [ -n "$user" ] && [ "${user%%:*}" != 0 ] && [ "${user%%:*}" != root ]
+          docker run --rm --entrypoint sh sidusadmindemo:ci -c '
+            for tool in composer git gcc make; do
+              if command -v "$tool" >/dev/null 2>&1; then echo "unexpected tool in the image: $tool" >&2; exit 1; fi
+            done
+            if grep -rIl "build-time-placeholder" /app /etc 2>/dev/null | grep .; then
+              echo "build-time placeholder baked into the image" >&2; exit 1
+            fi'
+
+      - name: Start the image against the MariaDB service
+        run: |
+          docker run -d --name app \
+            --network "${{ job.services.mariadb.network }}" \
+            -p 127.0.0.1:8080:80 \
+            -e APP_SECRET=ci-smoke-not-a-secret \
+            -e "DATABASE_URL=mysql://symfony:symfony@mariadb:3306/symfony?serverVersion=mariadb-11.4.0" \
+            -e TRUSTED_PROXIES=127.0.0.1 \
+            sidusadmindemo:ci
+
+      - name: Smoke test
+        run: scripts/smoke.sh http://127.0.0.1:8080
+
+      - name: Container is healthy and runs as non-root
+        run: |
+          set -eu
+          for _ in $(seq 1 30); do
+            health="$(docker inspect --format '{{.State.Health.Status}}' app)"
+            [ "$health" = healthy ] && break
+            sleep 2
+          done
+          echo "health: $health"
+          [ "$health" = healthy ]
+          [ "$(docker exec app id -u)" != 0 ]
+
+      - name: Application logs
+        if: always()
+        run: docker logs app || true
+
+  publish:
+    name: Publish image to GHCR
+    # Pushes to master and vX.Y.Z tags only (the `on.push` filters above): never for pull requests.
+    if: github.event_name == 'push'
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags/labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=,format=short
+
+      # Same Dockerfile, same context, same cache scope as the `image` job: every layer is a cache hit,
+      # i.e. this pushes the image that was just smoke-tested.
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: frankenphp/Dockerfile
+          target: frankenphp_prod
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
