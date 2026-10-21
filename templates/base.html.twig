@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Sidus/AdminBundle Demo{% endblock %}</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="{{ asset('styles/bulma.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css">
-    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
+    {# Renders the importmap-managed Bulma <link> (imported from assets/app.js): it MUST come before app.css so the overrides win. #}
     {% block importmap %}{{ importmap('app') }}{% endblock %}
+    {# FontAwesome stays on the CDN: AssetMapper cannot download its webfonts (importmap:require only fetches JS/CSS). Pinned + SRI. #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.2/css/all.min.css"
+          integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a"
+          crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
     {% block stylesheets %}{% endblock %}
 </head>
 <body>

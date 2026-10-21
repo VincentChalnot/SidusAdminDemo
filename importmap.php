@@ -16,4 +16,8 @@ return [
         'path' => './assets/app.js',
         'entrypoint' => true,
     ],
+    'bulma/css/bulma.min.css' => [
+        'version' => '1.0.4',
+        'type' => 'css',
+    ],
 ];

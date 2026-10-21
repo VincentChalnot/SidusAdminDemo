@@ -1,5 +1,5 @@
 /*
- * App-level style overrides layered on top of Bulma (assets/styles/bulma.css).
+ * App-level style overrides layered on top of Bulma (the importmap-managed bulma/css/bulma.min.css).
  */
 .navbar-item img {
     max-height: 2rem;
