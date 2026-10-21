@@ -1,5 +1,88 @@
 # Changelog
 
+## Production image, worker-mode plumbing, CI and Bulma importmap — 2026-10-21
+
+Everything that does not depend on the (upcoming) Symfony 8.1 + rewritten-bundles port; the app stays on
+Symfony 7.4 and the current `sidus/*` bundles.
+
+### Production image (`frankenphp/Dockerfile`, target `frankenphp_prod`)
+
+- **Multi-stage, flat, 745 MB → 290 MB.** `app_builder` runs `composer install --no-dev --prefer-dist
+  --classmap-authoritative` (no `.git` clones of the `sidus/*` packages), `importmap:install`,
+  `asset-map:compile` and the prod cache warmup. `prod_rootfs` purges the compiler toolchain, perl and
+  pear/pecl that `dunglas/frankenphp` inherits from the official PHP image (`install-php-extensions` marks
+  every package as manually installed, so `apt-get autoremove` cannot do it: packages are purged by name,
+  followed by an `ldd`/`php -m` assertion that nothing needed went away). `frankenphp_prod` is `FROM scratch` +
+  one `COPY` of that rootfs, so deleted files really leave the image (file capabilities such as FrankenPHP's
+  `cap_net_bind_service` survive the copy). No composer, no git, no compiler, no dev dependency.
+- **Non-root** (`app`, uid/gid 10001), read-only code, writable `var/`, `/data` and `/config`.
+- **`HEALTHCHECK`** on the new `GET /healthz` route (`App\Action\HealthAction`, no database) served on a
+  probe-only plain-HTTP listener (`HEALTHCHECK_PORT`, default 2090) so that it works whatever `SERVER_NAME` is.
+- **Prod config**: `php.ini-production` + `app.prod.ini` (`opcache.validate_timestamps=0`, opcache preload via the
+  new `config/preload.php`, `expose_php=Off`, realpath cache), `APP_ENV=prod`, monolog to stderr as JSON,
+  OCI labels, pinned base (`dunglas/frankenphp:1.12-php8.4-trixie`, `composer/composer:2.8-bin`).
+- **No secrets baked in**: the build-time placeholders for `APP_SECRET`/`DATABASE_URL`/`TRUSTED_PROXIES` are no
+  longer `ENV`s of an image stage, they only exist inside one `RUN`; verified absent from the final image.
+- `frankenphp_dev` is kept for `compose.yaml` (composer, git, zip and the Xdebug option moved to it).
+- `.dockerignore` also excludes `.env` and the locally generated `public/assets`, `public/bundles`,
+  `assets/vendor`.
+
+### Caddyfile (one file for dev and prod)
+
+- `SERVER_NAME` (default `:80`, plain HTTP behind a proxy; a real domain gets automatic HTTPS), zstd/br/gzip,
+  access log on stdout, security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`,
+  `Permissions-Policy`; HSTS only when Caddy terminates TLS), immutable one-year cache for compiled `/assets/*`,
+  `Cache-Control: no-store` for everything PHP renders.
+- **Worker mode switch**: `FRANKENPHP_WORKER_MODE=on|off` (default **off**), `FRANKENPHP_WORKER_NUM`,
+  `MAX_REQUESTS` (worker recycling, mapped to symfony/runtime's `FRANKENPHP_LOOP_MAX`). `runtime/frankenphp-symfony`
+  was **not** installed: `symfony/runtime` 7.4 ships `FrankenPhpWorkerRunner` and detects workers natively (the
+  package is documented as "for Symfony < 7.4" by FrankenPHP and constrains `symfony/runtime` to `^5.4|^6|^7`, which
+  would block the Symfony 8 port); `extra.runtime` is unchanged (`disable_dotenv: true`, no `APP_RUNTIME` needed).
+  The switch is deliberately **not** called `FRANKENPHP_WORKER`: FrankenPHP defines `$_SERVER['FRANKENPHP_WORKER']`
+  in workers and symfony/runtime tests it for truthiness, so even `FRANKENPHP_WORKER=off` in the environment
+  switches the runtime to worker mode and every classic request fails with "frankenphp_handle_request() called
+  while not in worker mode".
+- With the **current** bundles, worker mode is expected to be broken and is: with it on, the second News list
+  request served by a worker answers `500` (`LogicException: Pager already applied`); the `/healthz`, home and
+  asset requests are fine, i.e. the plumbing itself works. The one-line default flip is
+  `ENV FRANKENPHP_WORKER_MODE=off` → `on` in the `frankenphp_prod` stage.
+
+### Entrypoint
+
+`RUN_MIGRATIONS=0` / `LOAD_FIXTURES=0` opt out of the migrations / fixtures (the database wait is skipped when both
+are off), fail-fast check for the required `APP_SECRET`, `DATABASE_URL` and `TRUSTED_PROXIES`, `exec` of the server
+(PID 1, graceful `docker stop`), POSIX sh.
+
+### Bulma through AssetMapper
+
+`assets/styles/bulma.css` (a 678 KB vendored copy) is gone: Bulma 1.0.4 (latest on npm) is the `bulma/css/bulma.min.css`
+importmap package (version tracked in `importmap.php`, downloaded by `importmap:install` — part of the composer
+auto-scripts and of the image build —, hashed by `asset-map:compile`) and is imported from `assets/app.js`, so
+`importmap()` renders the `<link rel="stylesheet">` before `app.css`. FontAwesome **stays on the jsDelivr CDN**
+(now pinned with SRI): `importmap:require` only downloads JS/CSS entries (a `.woff2` is requested as `…/+esm` and
+404s), and the stylesheet needs 8 webfont files; the only importmap-able alternative is FontAwesome's SVG-with-JS
+build (`js/all.min.js`, 1.5 MB / 545 KB gzipped for 8 icons). `templates/bundles/*` and
+`templates/form/bulma_layout.html.twig` are untouched.
+
+### Tests and CI
+
+- New PHPUnit functional suite (`tests/Functional`, 19 tests) on SQLite: home, `/healthz`, News list default
+  filters / title, status and author filters / sorting / paging / combined / no leak across requests, and
+  create/read/edit/delete. A `worker-mode` group (excluded by default, fails today) replays requests on a never-rebooted
+  kernel. Fixed on the way: `config/packages/test/framework.yaml` used `session.storage_id`, removed in Symfony 7, so
+  the `test` environment could not boot; added `symfony/browser-kit` and `symfony/css-selector` (dev).
+- `scripts/smoke.sh` (HTTP smoke test, replays the request sequence and requires byte-identical pages to detect
+  state leaks) and `scripts/prod-smoke.sh` / `make prod-smoke` (build + throwaway MariaDB on a user-defined network
+  with plain docker + cleanup). `make test`.
+- `.github/workflows/docker-image.yml` → `ci.yml`: `test` → `image` (build `frankenphp_prod` with GHA cache, hygiene
+  checks, MariaDB service container, `scripts/smoke.sh`) → `publish` (GHCR on `master` and `v*.*.*` tags only, the
+  sole job with `packages: write`).
+
+### Known, left as is
+
+- `app:fixtures:init` soft-deletes ~90 % of the generated news (`numberBetween(0, 999) > 95`), so the default list
+  shows ~37 of 1000 rows. Looks like a typo for a 5 % ratio; untouched.
+
 ## Production image fixes — 2026-07-21
 
 Two gaps in the `frankenphp_prod` build/runtime:
