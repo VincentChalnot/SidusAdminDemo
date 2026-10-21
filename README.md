@@ -109,10 +109,8 @@ Production image
 project deliberately has no prod `compose.yaml`: run the image directly or wrap it in your own
 compose/manifest.
 
-- **Built in stages**: a builder stage runs `composer install --no-dev --classmap-authoritative`,
-  `importmap:install`, `asset-map:compile` and `cache:warmup` (not `cache:clear`: in prod it fails with
-  `DoctrineMetadataCacheWarmer must load metadata first` because of `sidus/doctrine-filter-bundle`'s warmer,
-  see CHANGELOG). The final image is a flat
+- **Built in stages**: a builder stage runs `composer install --no-dev --classmap-authoritative` (its
+  auto-scripts: prod `cache:clear`, `assets:install`, `importmap:install`), then `asset-map:compile`. The final image is a flat
   copy of a cleaned root filesystem: **no composer, no git, no compiler/build tools** (the toolchain
   inherited from the FrankenPHP base image is purged), no dev dependency, no `.git`.
 - **Non-root**: runs as `app` (uid/gid `10001`). The application is read-only for it; only `var/`

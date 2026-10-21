@@ -6,9 +6,10 @@
 
 - PHP 8.4, **Symfony 8.1** (8.1.9), DoctrineBundle 3.3 / ORM 3.7 / DBAL 4.5, PHPUnit 12; `symfony.lock` pruned
   and refreshed.
-- `sidus/filter-bundle` ^6 → **^7.0**, `sidus/datagrid-bundle` ^4 → **^5.0**, `sidus/admin-bundle` ^5 → **^6.0**
-  and the new **`sidus/doctrine-filter-bundle` ^1.0** (the Doctrine provider is no longer part of the datagrid).
-  The four bundles are registered in `config/bundles.php`.
+- `sidus/filter-bundle` ^6 → **^7.0** (7.0.2), `sidus/datagrid-bundle` ^4 → **^5.0** (5.0.0),
+  `sidus/admin-bundle` ^5 → **^6.0** (6.0.0) and the new **`sidus/doctrine-filter-bundle` ^1.0** (1.0.0; the Doctrine
+  provider is no longer part of the datagrid). The four bundles are registered in `config/bundles.php`;
+  `composer.lock` is regenerated from Packagist.
 
 ### Configuration (the whole News section)
 
@@ -49,16 +50,6 @@ own request), the create/edit/delete flow with a session (CSRF, flash message no
 lists unchanged afterwards. `scripts/assert-worker.sh` proves, from FrankenPHP's own metrics
 (`CADDY_GLOBAL_OPTIONS=metrics`), that workers are active (`on`), absent (`off`) and recycled (`MAX_REQUESTS`
 low); `scripts/prod-smoke.sh` calls it and passes `MAX_REQUESTS`.
-
-### Image build
-
-The builder runs `assets:install`, `importmap:install`, `asset-map:compile` and `cache:warmup` itself instead of
-`composer run-script post-install-cmd`: with `sidus/doctrine-filter-bundle` 1.0, **`bin/console cache:clear` fails
-in prod** (`DoctrineMetadataCacheWarmer must load metadata first`): the bundle's non-optional `ListWarmer` loads the
-Doctrine metadata while the container is built, so DoctrineBundle's optional metadata warmer (priority 1000, run
-afterwards by `cache:clear` in the same container) refuses to run. `cache:warmup` is fine. The composer
-`auto-scripts` entry `cache:clear` has the same problem in `APP_ENV=prod`. Revert to the composer auto-script once
-the bundle is fixed.
 
 ## Production image, worker-mode plumbing, CI and Bulma importmap — 2026-10-21
 
