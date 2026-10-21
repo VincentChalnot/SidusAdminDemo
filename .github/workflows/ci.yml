@@ -2,10 +2,12 @@ name: CI
 
 # Pipeline: test -> image -> publish
 #
-#   test     PHP 8.4, composer install, lint, PHPUnit functional suite (SQLite).
+#   test     PHP 8.4, composer install, lint (YAML, Twig, container), PHPUnit functional suite (SQLite),
+#            including the worker-mode group (a never-rebooted kernel).
 #   image    builds the `frankenphp_prod` target (GHA layer cache), loads it locally, starts it against a
-#            MariaDB service container and runs scripts/smoke.sh (healthz, home, list, filtered, sorted,
-#            paged pages, headers, and a replay of the sequence to catch state leaking between requests).
+#            MariaDB service container and runs scripts/smoke.sh three times: with the image defaults (worker
+#            mode ON), with a low MAX_REQUESTS and 3 workers (recycling), and with the worker mode OFF. Each
+#            run asserts, from FrankenPHP's metrics, that the server really is in the expected mode.
 #   publish  pushes the image to GHCR - only on pushes to `master` and on `vX.Y.Z` tags. Pull requests
 #            stop after `image`.
 on:
@@ -73,6 +75,7 @@ jobs:
         run: |
           php bin/console lint:yaml config --parse-tags
           php bin/console lint:twig templates
+          php bin/console lint:container
 
       - name: PHPUnit
         run: vendor/bin/phpunit
@@ -134,7 +137,9 @@ jobs:
               echo "build-time placeholder baked into the image" >&2; exit 1
             fi'
 
-      - name: Start the image against the MariaDB service
+      # CADDY_GLOBAL_OPTIONS=metrics exposes frankenphp_* on the (unpublished) Caddy admin endpoint:
+      # scripts/assert-worker.sh reads it to prove the mode instead of trusting an environment variable.
+      - name: "Start the image against the MariaDB service (defaults, worker mode on)"
         run: |
           docker run -d --name app \
             --network "${{ job.services.mariadb.network }}" \
@@ -142,10 +147,13 @@ jobs:
             -e APP_SECRET=ci-smoke-not-a-secret \
             -e "DATABASE_URL=mysql://symfony:symfony@mariadb:3306/symfony?serverVersion=mariadb-11.4.0" \
             -e TRUSTED_PROXIES=127.0.0.1 \
+            -e CADDY_GLOBAL_OPTIONS=metrics \
             sidusadmindemo:ci
 
-      - name: Smoke test
-        run: scripts/smoke.sh http://127.0.0.1:8080
+      - name: Smoke test (worker mode, the image default)
+        run: |
+          scripts/smoke.sh http://127.0.0.1:8080
+          scripts/assert-worker.sh app on
 
       - name: Container is healthy and runs as non-root
         run: |
@@ -159,9 +167,47 @@ jobs:
           [ "$health" = healthy ]
           [ "$(docker exec app id -u)" != 0 ]
 
+      # Same image, same database (migrations and fixtures are idempotent), other settings.
+      - name: "Smoke test (worker recycling: MAX_REQUESTS=5, 3 workers)"
+        run: |
+          set -eu
+          docker rm -f app
+          docker run -d --name app-recycle \
+            --network "${{ job.services.mariadb.network }}" \
+            -p 127.0.0.1:8080:80 \
+            -e APP_SECRET=ci-smoke-not-a-secret \
+            -e "DATABASE_URL=mysql://symfony:symfony@mariadb:3306/symfony?serverVersion=mariadb-11.4.0" \
+            -e TRUSTED_PROXIES=127.0.0.1 \
+            -e CADDY_GLOBAL_OPTIONS=metrics \
+            -e MAX_REQUESTS=5 -e FRANKENPHP_WORKER_NUM=3 \
+            sidusadmindemo:ci
+          scripts/smoke.sh http://127.0.0.1:8080
+          scripts/assert-worker.sh app-recycle on recycling
+
+      - name: "Smoke test (classic mode: FRANKENPHP_WORKER_MODE=off)"
+        run: |
+          set -eu
+          docker rm -f app-recycle
+          docker run -d --name app-classic \
+            --network "${{ job.services.mariadb.network }}" \
+            -p 127.0.0.1:8080:80 \
+            -e APP_SECRET=ci-smoke-not-a-secret \
+            -e "DATABASE_URL=mysql://symfony:symfony@mariadb:3306/symfony?serverVersion=mariadb-11.4.0" \
+            -e TRUSTED_PROXIES=127.0.0.1 \
+            -e CADDY_GLOBAL_OPTIONS=metrics \
+            -e FRANKENPHP_WORKER_MODE=off \
+            sidusadmindemo:ci
+          scripts/smoke.sh http://127.0.0.1:8080
+          scripts/assert-worker.sh app-classic off
+
       - name: Application logs
         if: always()
-        run: docker logs app || true
+        run: |
+          for c in app app-recycle app-classic; do
+            echo "::group::$c"
+            docker logs "$c" 2>&1 | tail -n 100 || true
+            echo "::endgroup::"
+          done
 
   publish:
     name: Publish image to GHCR
