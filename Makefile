@@ -29,3 +29,11 @@ docker-status: ## Diplay containers status
 .PHONY: cc
 cc: ## Clear Symfony cache
 	rm -rf var/cache/*
+
+.PHONY: test
+test: ## Run the PHPUnit functional suite in the dev container (SQLite, never touches the dev database)
+	$(DC) exec -e DATABASE_URL='sqlite:///%kernel.project_dir%/var/test.db' php vendor/bin/phpunit
+
+.PHONY: prod-smoke
+prod-smoke: ## Build the production image and smoke-test it against a throwaway MariaDB container (plain docker)
+	scripts/prod-smoke.sh
