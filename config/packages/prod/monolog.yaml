@@ -6,9 +6,12 @@ monolog:
             handler: nested
             excluded_http_codes: [404, 405]
         nested:
+            # Containers log to stderr (docker logs / the orchestrator), one JSON object per line:
+            # a log file inside an immutable container would be invisible and lost on restart.
             type: stream
-            path: "%kernel.logs_dir%/%kernel.environment%.log"
+            path: "php://stderr"
             level: debug
+            formatter: monolog.formatter.json
         console:
             type: console
             process_psr_3_messages: false
