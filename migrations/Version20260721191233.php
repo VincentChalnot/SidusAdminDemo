@@ -17,6 +17,14 @@ final class Version20260721191233 extends AbstractMigration
         return 'Initial schema: author, category, news, news_category';
     }
 
+    /**
+     * MySQL/MariaDB commit implicitly after each DDL statement, a wrapping transaction cannot work.
+     */
+    public function isTransactional(): bool
+    {
+        return false;
+    }
+
     public function up(Schema $schema): void
     {
         $this->addSql('CREATE TABLE author (id INT AUTO_INCREMENT NOT NULL, full_name VARCHAR(255) NOT NULL, first_name VARCHAR(255) NOT NULL, last_name VARCHAR(255) NOT NULL, email VARCHAR(255) NOT NULL, PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci`');

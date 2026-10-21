@@ -2,3 +2,6 @@ doctrine_migrations:
     migrations_paths:
         'DoctrineMigrations': '%kernel.project_dir%/migrations'
     enable_profiler: false
+    # MySQL/MariaDB commit implicitly after every DDL statement: a wrapping transaction cannot work
+    # (and its commit is deprecated by doctrine/migrations).
+    transactional: false
