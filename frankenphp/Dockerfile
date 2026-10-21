@@ -101,8 +101,8 @@ RUN apt-get update \
 	&& install-php-extensions zip
 
 # 1. Dependencies only: this layer is invalidated by dependency changes, not by source changes.
-#    --prefer-dist overrides composer.json's "preferred-install: sidus/* => source" so vendor/ gets no .git
-#    clones (dist archives from GitHub; Composer falls back to a git clone if the download fails).
+#    --prefer-dist: dist archives, so vendor/ gets no .git clones (Composer falls back to a git clone if a download
+#    fails; the .git directories are removed below anyway).
 COPY --link composer.json composer.lock symfony.lock ./
 RUN --mount=type=cache,target=/root/.composer/cache,sharing=locked \
 	composer install --no-dev --prefer-dist --no-autoloader --no-scripts --no-progress
