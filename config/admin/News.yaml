@@ -2,13 +2,13 @@ sidus_admin:
     configurations:
         News:
             entity: App\Entity\News
+            prefix: /news
+            form_type: App\Form\Type\NewsType
+            # The built-in actions of the admin bundle (the demo has no custom action).
             controller_pattern:
                 - 'Sidus\AdminBundle\Action\{{Action}}Action'
-            template_pattern:
-                - 'Action/{{action}}.{{format}}.twig'
-                - '@SidusAdmin/Action/{{action}}.{{format}}.twig'
-            form_type: App\Form\Type\NewsType
-            prefix: /news
+            # No template_pattern: the default is '@SidusAdmin/Action/{{action}}.{{format}}.twig', which
+            # the bulma_1 theme (config/packages/admin.yaml) restyles.
             actions:
                 list:
                     path: /
@@ -16,9 +16,10 @@ sidus_admin:
                     path: /create
                 read:
                     path: /read/{id}
+                    requirements: { id: '\d+' }
                 edit:
                     path: /edit/{id}
+                    requirements: { id: '\d+' }
                 delete:
                     path: /delete/{id}
-            options:
-                icon: address-book
+                    requirements: { id: '\d+' }

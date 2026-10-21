@@ -1,65 +1,76 @@
 sidus_data_grid:
     configurations:
         News:
+            theme: bulma_1
+
+            # Sorting is declared on the columns; the sort filter of the inline list below is generated from them.
+            default_sort:
+                - { column: publicationDate, direction: desc }
+
             columns:
                 id:
                     label: '#'
+                    sortable: true  # no filter on the id: a column is sortable on its own
                 title:
                     template: 'Datagrid/clickable.html.twig'
-                publicationDate: ~
+                    sortable: true
+                publicationDate:
+                    sortable: true
                 publicationStatus:
                     template: 'Datagrid/badge.html.twig'
+                    sortable: true
                 author:
-                    sort_column: author.fullName
+                    sortable: author.fullName  # the displayed value is the author, the sort is on its full name
                 categories: ~
                 actions:
                     template: 'Datagrid/actions.html.twig'
+
             actions:
                 create:
-                    form_type: Sidus\AdminBundle\Form\Type\AdminLinkType
-                    admin_action: create
-                    label: Create
+                    # A link to the "create" action of the News admin, only rendered for the users who are granted it.
+                    options:
+                        admin_action: create
                     attr:
-                        class: button is-primary
+                        class: is-primary
 
-            # The query_handler configuration key must contain a valid Sidus/FilterBundle configuration definition
-            # See # See https://github.com/VincentChalnot/SidusFilterBundle for more information
-            query_handler:
+            # An inline list: the exact format of a sidus_filter.lists entry
+            # (https://github.com/VincentChalnot/SidusFilterBundle/blob/main/docs/configuration.md).
+            list:
                 provider: doctrine
                 options:
                     entity: App\Entity\News
-                sortable:
-                    - id
-                    - title
-                    - publicationDate
-                    - publicationStatus
-                    - author.fullName
-                default_sort:
-                    publicationDate: DESC
+                pagination:
+                    per_page: 15
                 filters:
-                    title: ~
+                    title:
+                        type: text
                     author:
+                        type: text
                         attributes: [author.fullName, author.email]
                     publicationDate:
                         type: date_range
                     publicationStatus:
                         type: choice
                         default: [validated, published]
-                        form_options:
+                        options:
                             multiple: true
-                            expanded: true
                             choices:
                                 Draft: draft
                                 Rejected: rejected
                                 Validated: validated
                                 Published: published
                                 Unpublished: unpublished
+                        form:
+                            options:
+                                expanded: true
                     categories:
-                        attributes: [categories.title]
-                        type: choice
-                        form_options:
-                            multiple: true
-                    deleted:
-                        default: 0
+                        type: relation
+                        attributes: [categories]
                         options:
-                            hidden: true
+                            multiple: true
+                            class: App\Entity\Category
+                    # Soft-deleted news are never listed: the value is fixed, the request cannot change it.
+                    deleted:
+                        type: exact
+                        locked: true
+                        default: false
