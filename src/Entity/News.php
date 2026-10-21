@@ -38,7 +38,7 @@ class News
     protected ?DateTimeInterface $publicationDate = null;
 
     #[Assert\NotBlank]
-    #[Assert\Choice(['draft', 'rejected', 'validated', 'published', 'unpublished'])]
+    #[Assert\Choice(choices: ['draft', 'rejected', 'validated', 'published', 'unpublished'])]
     #[ORM\Column(type: 'string')]
     protected string $publicationStatus = 'draft';
 

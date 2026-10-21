@@ -1,13 +1,11 @@
 doctrine:
     dbal:
+        # The URL carries the platform: the "mariadb-" prefix of serverVersion matters (a plain "11.4" is detected as
+        # MySQL), and a declared version spares a connection at platform detection (needed by sidus/doctrine-filter-bundle).
         url: '%env(resolve:DATABASE_URL)%'
 
         profiling_collect_backtrace: '%kernel.debug%'
-        use_savepoints: true
     orm:
-        auto_generate_proxy_classes: true
-        enable_lazy_ghost_objects: true
-        report_fields_where_declared: true
         validate_xml_mapping: true
         naming_strategy: doctrine.orm.naming_strategy.underscore_number_aware
         auto_mapping: true
@@ -30,8 +28,6 @@ when@test:
 when@prod:
     doctrine:
         orm:
-            auto_generate_proxy_classes: false
-            proxy_dir: '%kernel.build_dir%/doctrine/orm/Proxies'
             query_cache_driver:
                 type: pool
                 pool: doctrine.system_cache_pool
