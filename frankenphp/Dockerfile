@@ -118,14 +118,9 @@ COPY --link migrations migrations
 COPY --link importmap.php importmap.php
 COPY --link assets assets
 
-# 3. Optimized, classmap-authoritative autoloader, assets:install and importmap:install (downloads the vendored
-#    JS/CSS packages, e.g. Bulma, into assets/vendor/), the AssetMapper compile, then the prod cache warmup
-#    (container, routes, Twig, Doctrine metadata, preload file).
-#    These are the composer.json auto-scripts, spelled out because `cache:clear` is NOT usable in prod with
-#    sidus/doctrine-filter-bundle 1.0: its non-optional ListWarmer loads the Doctrine metadata while the container is
-#    built, then DoctrineBundle's optional metadata warmer (run by cache:clear) fails with "DoctrineMetadataCacheWarmer
-#    must load metadata first". `cache:warmup` runs the warmers in priority order and works. Revert to
-#    `composer run-script --no-dev post-install-cmd` once the bundle is fixed.
+# 3. Optimized, classmap-authoritative autoloader; then the composer.json auto-scripts: prod cache:clear
+#    (warmup: container, routes, Twig, Doctrine proxies, preload file), assets:install and importmap:install
+#    (downloads the vendored JS/CSS packages, e.g. Bulma, into assets/vendor/), then the AssetMapper compile.
 #    The placeholders are build-time ONLY: nothing connects to a database here, and the compiled cache only
 #    holds %env()% *references*: the real APP_SECRET/DATABASE_URL/TRUSTED_PROXIES come from the runtime
 #    environment (the entrypoint refuses to start without them).
@@ -134,10 +129,8 @@ RUN set -eux; \
 		DATABASE_URL="mysql://build:build@127.0.0.1:3306/build?serverVersion=mariadb-11.4.0" \
 		TRUSTED_PROXIES=127.0.0.1; \
 	composer dump-autoload --no-dev --classmap-authoritative; \
-	php bin/console assets:install public; \
-	php bin/console importmap:install; \
+	composer run-script --no-dev post-install-cmd; \
 	php bin/console asset-map:compile; \
-	php bin/console cache:warmup; \
 	find vendor -type d -name .git -prune -exec rm -rf {} +; \
 	rm -rf var/log/*; \
 	chmod +x bin/console
