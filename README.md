@@ -1,10 +1,11 @@
 Sidus/AdminDemo
 ===================
 
-Demo application built on **Symfony 7.4** and [**Bulma**](https://bulma.io), showcasing
+Demo application built on **Symfony 8.1** and [**Bulma**](https://bulma.io), showcasing
 [Sidus/AdminBundle](https://github.com/VincentChalnot/SidusAdminBundle),
-[Sidus/DataGridBundle](https://github.com/VincentChalnot/SidusDataGridBundle) and
-[Sidus/FilterBundle](https://github.com/VincentChalnot/SidusFilterBundle): a full CRUD admin
+[Sidus/DataGridBundle](https://github.com/VincentChalnot/SidusDataGridBundle),
+[Sidus/FilterBundle](https://github.com/VincentChalnot/SidusFilterBundle) and
+[Sidus/DoctrineFilterBundle](https://github.com/VincentChalnot/SidusDoctrineFilterBundle): a full CRUD admin
 section (list, create, read, edit, delete) generated from plain YAML configuration, with sortable,
 paginated, filterable listings — no scaffolding, no generated controllers.
 
@@ -44,32 +45,61 @@ You are now all set! 🙌
 Stack
 -----
 
-- PHP 8.4, Symfony 7.4, Doctrine ORM 3 / DBAL 4, Doctrine Migrations (no `schema:create`/`schema:update`
+- PHP 8.4, Symfony 8.1, Doctrine ORM 3 / DBAL 4 (DoctrineBundle 3), Doctrine Migrations (no `schema:create`/`schema:update`
   in normal use — the schema lives in `migrations/`)
 - FrankenPHP (Caddy) — no exposed ports in dev, no TLS termination (fronted by an external Traefik); the
   production image can also serve HTTPS itself, see below
 - [Bulma](https://bulma.io) 1.0.4 as an [AssetMapper](https://symfony.com/doc/current/frontend/asset_mapper.html)
   importmap package (`php bin/console importmap:require bulma/css/bulma.min.css`: the version is tracked in
   `importmap.php`, `importmap:install` downloads it into the git-ignored `assets/vendor/`, `asset-map:compile`
-  hashes it for prod; no Node/webpack build step) + a small custom Symfony form theme
-  (`templates/form/bulma_layout.html.twig`). FontAwesome is still loaded from jsDelivr (version-pinned, with
-  SRI): AssetMapper's `importmap:require` can only download JS/CSS files, not the webfonts the stylesheet needs
-- `sidus/admin-bundle` ^5.0, `sidus/datagrid-bundle` ^4.0, `sidus/filter-bundle` ^6.0 — see
-  [CHANGELOG.md](CHANGELOG.md) for the version bumps made while modernizing this demo
+  hashes it for prod; no Node/webpack build step). The markup (layout, navbar, forms, datagrid, pager, flash
+  messages) comes from the bundles' own **`bulma_1` themes**, see "Configuration" below: the demo carries no
+  copy of the bundles' templates, only `templates/base.html.twig` (navbar, footer, assets) and a few datagrid
+  cell templates. FontAwesome is still loaded from jsDelivr (version-pinned, with SRI): AssetMapper's
+  `importmap:require` can only download JS/CSS files, not the webfonts the stylesheet needs
+- `sidus/admin-bundle` ^6.0, `sidus/datagrid-bundle` ^5.0, `sidus/filter-bundle` ^7.0 and
+  `sidus/doctrine-filter-bundle` ^1.0 — see [CHANGELOG.md](CHANGELOG.md) for the version bumps made while
+  modernizing this demo
+
+Configuration
+-------------
+
+The whole News section is described by two YAML files, [`config/datagrid/News.yaml`](config/datagrid/News.yaml)
+(the list: provider, columns, sort, filters, pagination, actions) and
+[`config/admin/News.yaml`](config/admin/News.yaml) (the actions and their routes). The bundles' Bulma themes
+are **opt-in**, nothing is picked up by default:
+
+| Where | Setting |
+|---|---|
+| `config/packages/admin.yaml` | `sidus_admin.theme: bulma_1` (layout, flash messages, action buttons) and `base_template: base.html.twig` (the demo's own base template, which extends `@SidusAdmin/theme/bulma_1/base.html.twig`) |
+| `config/packages/twig.yaml` | `twig.form_themes: ['@SidusAdmin/form/bulma_1_layout.html.twig']` |
+| `config/datagrid/News.yaml` | `theme: bulma_1` (table, pager, sort buttons, filter form) |
+
+The list URL is a plain GET query, so every state is a link you can bookmark:
+
+```
+/news/?filters[title]=qui&filters[publicationStatus][]=draft&sort=-publicationDate&page=2
+/news/?sort=title                 ascending; a leading "-" is descending
+/news/?filters[publicationStatus]= an empty value clears a default (here: validated + published)
+```
+
+An absent filter keeps its default, an invalid `page`/`sort`/filter value never errors: the page answers `200`,
+shows the violation and falls back to the default. Sort buttons submit `filters[sort]`, pager links carry the
+current filters and sort.
 
 Tests
 -----
 
 `vendor/bin/phpunit` runs a functional suite (Symfony `WebTestCase`) against a deterministic SQLite
 database that is rebuilt before every test (no MariaDB needed): home page, `/healthz`, the News
-datagrid (default filters, title/status/author filters, sorting, paging, all combined) and
-create/read/edit/delete. `make test` runs it inside the dev container. To run it against another
+datagrid (default filters, filters, sorting through the sort buttons, pager links keeping the filters, invalid
+input) and create/read/edit/delete. `make test` runs it inside the dev container. To run it against another
 database, export `DATABASE_URL` (a real environment variable wins over `phpunit.xml.dist`; Doctrine
 appends `_test` to the database name in the `test` environment).
 
-A separate `worker-mode` test group replays requests on a never-rebooted kernel, i.e. FrankenPHP
-worker semantics. It is excluded by default because the current, stateful `sidus/*` bundles fail it
-(`LogicException: Pager already applied`): `vendor/bin/phpunit --group worker-mode`.
+The `worker-mode` test group replays the same requests on a never-rebooted kernel, i.e. FrankenPHP worker
+semantics, and compares them with a fresh kernel per request; it runs with the rest of the suite
+(`vendor/bin/phpunit --group worker-mode` runs only it).
 
 Production image
 -----------------
@@ -80,7 +110,9 @@ project deliberately has no prod `compose.yaml`: run the image directly or wrap 
 compose/manifest.
 
 - **Built in stages**: a builder stage runs `composer install --no-dev --classmap-authoritative`,
-  `importmap:install`, `asset-map:compile` and warms the Symfony prod cache. The final image is a flat
+  `importmap:install`, `asset-map:compile` and `cache:warmup` (not `cache:clear`: in prod it fails with
+  `DoctrineMetadataCacheWarmer must load metadata first` because of `sidus/doctrine-filter-bundle`'s warmer,
+  see CHANGELOG). The final image is a flat
   copy of a cleaned root filesystem: **no composer, no git, no compiler/build tools** (the toolchain
   inherited from the FrankenPHP base image is purged), no dev dependency, no `.git`.
 - **Non-root**: runs as `app` (uid/gid `10001`). The application is read-only for it; only `var/`
@@ -118,12 +150,12 @@ introspection breaks.) Runtime environment:
 | `SERVER_NAME` | `:80` | Caddy site address. `:80` = plain HTTP for any `Host` (behind Traefik or another TLS-terminating proxy, `auto_https` never kicks in). A real domain such as `demo.example.com` makes Caddy obtain and renew a certificate automatically (publish ports 80, 443 and `443/udp`, keep `/data` persistent) and enables HSTS. |
 | `RUN_MIGRATIONS` | `1` | `0` skips `doctrine:migrations:migrate` at start. |
 | `LOAD_FIXTURES` | `1` | `0` skips `app:fixtures:init` (already a no-op when data exists). The database wait is skipped when both are `0`. |
-| `FRANKENPHP_WORKER_MODE` | `off` | `on` runs the app in FrankenPHP worker mode, see below. |
+| `FRANKENPHP_WORKER_MODE` | `on` | `on`/`off`: FrankenPHP worker mode, see below. `off` is classic mode (the kernel boots on every request). |
 | `FRANKENPHP_WORKER_NUM` | FrankenPHP default (2 × CPUs) | Worker threads when the worker mode is on. |
-| `MAX_REQUESTS` | `500` | Requests handled by one worker before it is recycled (worker mode). |
+| `MAX_REQUESTS` | `500` | Requests handled by one worker before it is recycled (worker mode; passed to FrankenPHP as `FRANKENPHP_LOOP_MAX`). |
 | `HEALTHCHECK_PORT` | `2090` | Port of the probe-only listener used by the `HEALTHCHECK`. |
 | `FRANKENPHP_CONFIG` | – | Extra lines for the Caddy `frankenphp { }` block, e.g. `num_threads 8`. |
-| `CADDY_GLOBAL_OPTIONS` | – | Extra Caddy global options. |
+| `CADDY_GLOBAL_OPTIONS` | – | Extra Caddy global options. `metrics` exposes FrankenPHP's Prometheus metrics on the (unpublished) admin endpoint, see "Worker mode". |
 
 At start, `frankenphp/docker-entrypoint.sh` (for the `frankenphp` server command only, not for one-off
 `docker run ... php bin/console ...`) checks the three required variables, waits for the database,
@@ -140,17 +172,27 @@ working whatever `SERVER_NAME` is, including a domain with automatic HTTPS.
 
 ### Worker mode
 
-`FRANKENPHP_WORKER_MODE` is a switch (`off`/`on`) read by the Caddyfile; the image default is a single line,
-`ENV FRANKENPHP_WORKER_MODE=off`, in the `frankenphp_prod` stage of `frankenphp/Dockerfile`. With `on`, the
-Symfony kernel boots once per worker thread and serves up to `MAX_REQUESTS` requests before the worker is
-recycled. `symfony/runtime` 7.4 detects FrankenPHP workers natively, no extra package is needed
-(`runtime/frankenphp-symfony` is only for Symfony < 7.4 and does not support Symfony 8).
+Worker mode is **on by default** in the production image: the Symfony kernel boots once per worker thread and
+serves up to `MAX_REQUESTS` requests before the worker script is restarted (recycling bounds memory growth).
+`FRANKENPHP_WORKER_MODE` is a switch (`on`/`off`) read by the Caddyfile; the image default is a single line,
+`ENV FRANKENPHP_WORKER_MODE=on`, in the `frankenphp_prod` stage of `frankenphp/Dockerfile` (the Caddyfile and the
+dev target default to `off`). `symfony/runtime` 8.1 detects FrankenPHP workers natively, no extra package is
+needed (`runtime/frankenphp-symfony` is only for Symfony < 7.4).
 
-**Worker mode is off by default and currently broken**: every service must be reset between requests, and the
-current `sidus/*` bundles are not worker-safe (the second request to the News list on the same worker answers
-`500 Pager already applied`). To debug a worker-related problem, `-e FRANKENPHP_WORKER_MODE=off` disables it
-without rebuilding. To check whether the bundles are worker-safe:
-`FRANKENPHP_WORKER_MODE=on make prod-smoke` and `vendor/bin/phpunit --group worker-mode`.
+It is safe with the current bundles (filter 7, doctrine-filter 1, datagrid 5, admin 6): the `worker-mode` test
+group and the worker smoke runs below show no state carried from one request to the next. To debug a
+worker-related problem, `-e FRANKENPHP_WORKER_MODE=off` switches back to classic mode without rebuilding. Each
+worker thread holds its own kernel: measured with `docker stats`, the default 48 workers (2 × 24 CPUs) take
+about 200 MiB against 110 MiB in classic mode; set `FRANKENPHP_WORKER_NUM` to what the host should afford.
+
+**Checking that worker mode is really active**: start the container with `-e CADDY_GLOBAL_OPTIONS=metrics`,
+which exposes `frankenphp_*` metrics on the Caddy admin endpoint (`localhost:2019` inside the container, never
+published): `docker exec <container> curl -s localhost:2019/metrics | grep ^frankenphp_` shows
+`frankenphp_total_workers`, `frankenphp_worker_request_count` and `frankenphp_worker_restarts`.
+`scripts/assert-worker.sh <container> on|off [recycling]` asserts them, and `make prod-smoke` calls it. A low
+`MAX_REQUESTS` proves the recycling (`MAX_REQUESTS=5 FRANKENPHP_WORKER_NUM=3 make prod-smoke` requires worker
+restarts), `FRANKENPHP_WORKER_MODE=off make prod-smoke` that the classic mode still passes. In the
+test suite, `vendor/bin/phpunit --group worker-mode` replays requests on a never-rebooted kernel.
 
 ### Running the image locally
 
@@ -174,10 +216,18 @@ docker inspect --format '{{.State.Health.Status}}' sidus-demo
 docker rm -f -v sidus-demo sidus-demo-db && docker network rm sidus-demo
 ```
 
-`scripts/smoke.sh` waits for `/healthz`, requests the home page, the News list, a filtered, a sorted and a
-paged list (asserting `200`, page markers and the cache/security headers, plus the importmap-served Bulma
-asset), then replays that sequence several times: every page must stay byte-identical, which is how state
-leaking between requests is detected.
+`scripts/smoke.sh` waits for `/healthz`, then:
+
+- requests the home page, the News list, filtered / sorted / paged lists (`?filters[title]=…&sort=-publicationDate&page=2`),
+  invalid input (`page=abc`: a violation, still `200`) and the importmap-served Bulma asset, asserting the status,
+  page markers and the cache/security headers;
+- checks the datagrid: the sort buttons and the order they give, pager links that keep filters and sort;
+- replays the sequence several times: every page must stay byte-identical, which is how state leaking between
+  requests is detected;
+- alternates six different filter/sort/page requests in a loop, then sends them concurrently: a page must always
+  be the one of its own request;
+- runs a create / edit / delete flow with a session (CSRF tokens, flash message, which must not show up in
+  another session) and checks that the lists are unchanged afterwards.
 
 ### CI
 

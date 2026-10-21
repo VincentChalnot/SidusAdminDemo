@@ -1,5 +1,65 @@
 # Changelog
 
+## Symfony 8.1, Sidus bundles 5–7 + DoctrineFilterBundle 1, worker mode on — 2026-10-21
+
+### Platform and dependencies
+
+- PHP 8.4, **Symfony 8.1** (8.1.9), DoctrineBundle 3.3 / ORM 3.7 / DBAL 4.5, PHPUnit 12; `symfony.lock` pruned
+  and refreshed.
+- `sidus/filter-bundle` ^6 → **^7.0**, `sidus/datagrid-bundle` ^4 → **^5.0**, `sidus/admin-bundle` ^5 → **^6.0**
+  and the new **`sidus/doctrine-filter-bundle` ^1.0** (the Doctrine provider is no longer part of the datagrid).
+  The four bundles are registered in `config/bundles.php`.
+
+### Configuration (the whole News section)
+
+- `config/datagrid/News.yaml`: inline `list:` with the `doctrine` provider; `sortable` columns (`author` sorts on
+  `author.fullName`), `default_sort`; filters `title` (text), `author` (text over `author.fullName` and
+  `author.email`), `publicationDate` (`date_range`), `publicationStatus` (expanded multiple `choice`, default
+  `validated` + `published`), `categories` (`relation`), `deleted` (`exact`, locked to `false`); the create link
+  is an action with `options: {admin_action: create}`; `theme: bulma_1`.
+- `config/admin/News.yaml`: `requirements: {id: '\d+'}` on the id routes.
+- **Themes are opt-in**: `sidus_admin.theme: bulma_1`, `twig.form_themes: ['@SidusAdmin/form/bulma_1_layout.html.twig']`,
+  `theme: bulma_1` on the datagrid. `templates/bundles/**` and `templates/form/bulma_layout.html.twig` are
+  **deleted** (the bundles ship Bulma themes now); `templates/base.html.twig` extends
+  `@SidusAdmin/theme/bulma_1/base.html.twig` and only adds the navbar, the footer and the assets. The cell
+  templates `templates/Datagrid/*` are unchanged.
+- New list URLs: `?filters[title]=…&sort=-publicationDate&page=2` (was `?form[filters][title]=…&form[sortable][config][column]=…&page=2`);
+  an invalid `page`, `sort` or filter value is a violation with a `200` and the default state, never an error.
+- `Assert\Choice(choices: [...])` in `News` (named argument).
+
+### Deprecations fixed (prod log empty on MariaDB 11.4)
+
+`doctrine.orm.controller_resolver.auto_mapping` removed (deprecated since DoctrineBundle 3.1); the initial
+migration and `doctrine_migrations` are non-transactional (MySQL/MariaDB commit after every DDL statement);
+`config/routes/dev/web_profiler.yaml` uses `*.php` route resources.
+
+### Fixtures
+
+`app:fixtures:init` marked about **90%** of the news as deleted (`numberBetween(0, 999) > 95`, a typo for a 0..99
+range); it is now about 5%, so the default list shows several hundred of the 1000 news instead of ~37.
+
+### Worker mode is on by default
+
+`ENV FRANKENPHP_WORKER_MODE=on` in the `frankenphp_prod` stage (`-e FRANKENPHP_WORKER_MODE=off` still switches
+back, the Caddyfile and dev default stay `off`). The `worker-mode` PHPUnit group (a never-rebooted kernel against
+a fresh kernel per request) passes and is **no longer excluded** from the default run.
+`scripts/smoke.sh` was rewritten for the new URLs and gained: sort buttons and order, pager links keeping
+filters/sort, `page=abc` → `200`, alternating filters in a loop and concurrently (a page is always the one of its
+own request), the create/edit/delete flow with a session (CSRF, flash message not leaking into another session),
+lists unchanged afterwards. `scripts/assert-worker.sh` proves, from FrankenPHP's own metrics
+(`CADDY_GLOBAL_OPTIONS=metrics`), that workers are active (`on`), absent (`off`) and recycled (`MAX_REQUESTS`
+low); `scripts/prod-smoke.sh` calls it and passes `MAX_REQUESTS`.
+
+### Image build
+
+The builder runs `assets:install`, `importmap:install`, `asset-map:compile` and `cache:warmup` itself instead of
+`composer run-script post-install-cmd`: with `sidus/doctrine-filter-bundle` 1.0, **`bin/console cache:clear` fails
+in prod** (`DoctrineMetadataCacheWarmer must load metadata first`): the bundle's non-optional `ListWarmer` loads the
+Doctrine metadata while the container is built, so DoctrineBundle's optional metadata warmer (priority 1000, run
+afterwards by `cache:clear` in the same container) refuses to run. `cache:warmup` is fine. The composer
+`auto-scripts` entry `cache:clear` has the same problem in `APP_ENV=prod`. Revert to the composer auto-script once
+the bundle is fixed.
+
 ## Production image, worker-mode plumbing, CI and Bulma importmap — 2026-10-21
 
 Everything that does not depend on the (upcoming) Symfony 8.1 + rewritten-bundles port; the app stays on
@@ -42,10 +102,9 @@ Symfony 7.4 and the current `sidus/*` bundles.
   in workers and symfony/runtime tests it for truthiness, so even `FRANKENPHP_WORKER=off` in the environment
   switches the runtime to worker mode and every classic request fails with "frankenphp_handle_request() called
   while not in worker mode".
-- With the **current** bundles, worker mode is expected to be broken and is: with it on, the second News list
-  request served by a worker answers `500` (`LogicException: Pager already applied`); the `/healthz`, home and
-  asset requests are fine, i.e. the plumbing itself works. The one-line default flip is
-  `ENV FRANKENPHP_WORKER_MODE=off` → `on` in the `frankenphp_prod` stage.
+- With the bundles of that time, worker mode was broken (the second News list request served by a worker
+  answered `500`, `LogicException: Pager already applied`); the plumbing itself worked. **Superseded by the entry
+  above: worker mode is now on by default**, `ENV FRANKENPHP_WORKER_MODE=on` in the `frankenphp_prod` stage.
 
 ### Entrypoint
 
