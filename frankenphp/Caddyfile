@@ -8,8 +8,9 @@
 #                         comma-separated addresses are allowed, e.g. "demo.example.com, :8080".
 #                         NB: the default is written ":80" (note the colon); "80" alone would be parsed
 #                         by Caddy as the *hostname* "80".
-#   FRANKENPHP_WORKER_MODE "on" | "off" (default "off"): boots the Symfony kernel once per worker and
-#                         keeps it in memory between requests (see frankenphp/worker/*.caddyfile).
+#   FRANKENPHP_WORKER_MODE "on" | "off": boots the Symfony kernel once per worker and keeps it in memory
+#                         between requests (see frankenphp/worker/*.caddyfile). Default here "off" (what the
+#                         dev target uses: bind-mounted sources, --watch); the frankenphp_prod image sets "on".
 #                         NB: do NOT name it FRANKENPHP_WORKER: FrankenPHP exposes its own
 #                         $_SERVER['FRANKENPHP_WORKER'] flag inside workers, and any value of an env var
 #                         with that name (even "off") would make symfony/runtime think it runs in a worker.

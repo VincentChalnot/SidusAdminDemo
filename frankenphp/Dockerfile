@@ -216,9 +216,10 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
 # Runtime configuration defaults. None of the secrets/endpoints (APP_SECRET, DATABASE_URL,
 # TRUSTED_PROXIES) has a default here, by design: provide them at `docker run` time.
 #
-# WORKER MODE SWITCH - one line. "off" = classic mode (safe with the current stateful sidus/* bundles);
-# flip to "on" (or run with -e FRANKENPHP_WORKER_MODE=on) once the bundles are worker-safe.
-ENV FRANKENPHP_WORKER_MODE=off
+# WORKER MODE SWITCH - one line. "on" = FrankenPHP worker mode: the kernel is booted once per worker thread and serves
+# up to MAX_REQUESTS requests (safe: sidus/* 5-7 are immutable, nothing survives a request). Run with
+# -e FRANKENPHP_WORKER_MODE=off (or change this line) to boot the kernel for every request, e.g. to debug.
+ENV FRANKENPHP_WORKER_MODE=on
 ENV MAX_REQUESTS=500
 ENV HEALTHCHECK_PORT=2090
 
