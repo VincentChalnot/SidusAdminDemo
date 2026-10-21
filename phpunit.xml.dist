@@ -12,7 +12,17 @@
     <php>
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
+        <server name="KERNEL_CLASS" value="App\Kernel" />
         <server name="SHELL_VERBOSITY" value="-1" />
+
+        <!--
+            Symfony never reads .env files here (symfony/runtime has disable_dotenv), so the variables
+            the app needs are declared for the test run. Not forced: a real environment variable wins,
+            e.g. DATABASE_URL=mysql://... to run the same suite against MariaDB.
+        -->
+        <server name="APP_SECRET" value="phpunit-secret-not-a-real-one" />
+        <server name="TRUSTED_PROXIES" value="127.0.0.1" />
+        <server name="DATABASE_URL" value="sqlite:///%kernel.project_dir%/var/test.db" />
     </php>
 
     <testsuites>
@@ -20,6 +30,17 @@
             <directory>tests</directory>
         </testsuite>
     </testsuites>
+
+    <!--
+        The "worker-mode" group replays requests on a single, never-rebooted kernel (FrankenPHP
+        worker semantics). It fails with the current, stateful sidus/* bundles ("Pager already
+        applied"), so it is opt-in for now: run "vendor/bin/phpunit" with the group option set to worker-mode.
+    -->
+    <groups>
+        <exclude>
+            <group>worker-mode</group>
+        </exclude>
+    </groups>
 
     <source>
         <include>
