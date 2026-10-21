@@ -1,9 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% block title %}Sidus/AdminBundle Demo{% endblock %}</title>
+{#
+    The demo layout: the Bulma 1 layout of Sidus/AdminBundle (flash messages, <main>), plus the navbar, the footer and
+    the stylesheets. It is the `base_template` of the admin (config/packages/admin.yaml): every admin action extends it,
+    as do the demo pages.
+#}
+{% extends '@SidusAdmin/theme/bulma_1/base.html.twig' %}
+
+{% block title %}Sidus/AdminBundle Demo{% endblock %}
+
+{% block stylesheets %}
     <link rel="icon" href="data:,">
     {# Renders the importmap-managed Bulma <link> (imported from assets/app.js): it MUST come before app.css so the overrides win. #}
     {% block importmap %}{{ importmap('app') }}{% endblock %}
@@ -12,9 +16,9 @@
           integrity="sha384-nRgPTkuX86pH8yjPJUAFuASXQSSl2/bBUiNV47vSYpKFxHJhbcrGnmlYpYJMeD7a"
           crossorigin="anonymous" referrerpolicy="no-referrer">
     <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
-    {% block stylesheets %}{% endblock %}
-</head>
-<body>
+{% endblock %}
+
+{% block body %}
     <nav class="navbar is-light" role="navigation" aria-label="main navigation">
         <div class="container">
             <div class="navbar-brand">
@@ -52,13 +56,8 @@
         </div>
     </nav>
 
-    <section class="section">
-        <div class="container is-wide">
-            {% block body %}
-                {% block container %}{% endblock %}
-            {% endblock %}
-        </div>
-    </section>
+    {# The flash messages and the <main> of the bundle layout #}
+    {{ parent() }}
 
     <footer class="footer">
         <div class="container">
@@ -72,6 +71,13 @@
             </div>
         </div>
     </footer>
+{% endblock %}
 
-</body>
-</html>
+{# Wider than Bulma's default container, see assets/styles/app.css #}
+{% block main %}
+    <main class="section">
+        <div class="container is-wide">
+            {{ block('container') }}
+        </div>
+    </main>
+{% endblock %}

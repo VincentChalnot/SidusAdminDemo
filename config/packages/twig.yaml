@@ -3,8 +3,9 @@ twig:
     debug: '%kernel.debug%'
     strict_variables: '%kernel.debug%'
     form_themes:
-        - 'form/bulma_layout.html.twig'
-        - '@SidusDataGrid/Form/bootstrap4.html.twig'
+        # Opt-in Bulma 1 layout of the Symfony forms (the create/edit/delete forms). The filter form of the datagrid
+        # gets its own Bulma theme from the datagrid (`theme: bulma_1` in config/datagrid/News.yaml).
+        - '@SidusAdmin/form/bulma_1_layout.html.twig'
     globals:
         statusBadge:
             draft: warning

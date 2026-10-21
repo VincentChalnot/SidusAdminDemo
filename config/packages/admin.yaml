@@ -1,2 +1,6 @@
 sidus_admin:
+    # Opt-in Bulma 1 templates for the actions (the bundle is neutral, framework-agnostic HTML by default).
+    # The matching form layout is enabled in config/packages/twig.yaml. Bulma itself is loaded by templates/base.html.twig.
+    theme: bulma_1
+    # The demo layout (navbar, footer): extends the theme's layout, see templates/base.html.twig.
     base_template: 'base.html.twig'
