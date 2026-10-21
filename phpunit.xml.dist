@@ -31,17 +31,6 @@
         </testsuite>
     </testsuites>
 
-    <!--
-        The "worker-mode" group replays requests on a single, never-rebooted kernel (FrankenPHP
-        worker semantics). It fails with the current, stateful sidus/* bundles ("Pager already
-        applied"), so it is opt-in for now: run "vendor/bin/phpunit" with the group option set to worker-mode.
-    -->
-    <groups>
-        <exclude>
-            <group>worker-mode</group>
-        </exclude>
-    </groups>
-
     <source>
         <include>
             <directory>src</directory>
