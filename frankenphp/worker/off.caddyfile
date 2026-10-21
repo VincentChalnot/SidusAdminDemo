@@ -1,0 +1,3 @@
+# Worker mode disabled (FRANKENPHP_WORKER_MODE=off, the default): classic mode, the kernel is booted for
+# every request. Intentionally empty - a debugging switch, and the safe choice until every service is
+# worker-safe (nothing may keep per-request state between two requests).

@@ -1,32 +1,92 @@
-# This container is never reached directly: an external Traefik reverse proxy
-# (running outside this compose project, on the shared `${TRAEFIK_NETWORK}`
-# docker network) terminates TLS and forwards to this service in plain HTTP.
+# Single Caddyfile shared by the `frankenphp_dev` and `frankenphp_prod` targets
+# (see frankenphp/Dockerfile). Everything environment-specific is an env var:
 #
-# The site address is a bare ":80" (port only, no host) on purpose: Traefik
-# does host-based routing externally via its own labels/rules (see
-# compose.yaml), so Caddy here must accept any Host header. Anything else in
-# the address position — e.g. "{$SERVER_NAME:80}" without a leading colon —
-# gets parsed by Caddy as a *hostname* "80", which both (a) makes the site
-# only match requests with a literal "Host: 80" header, matching nothing real,
-# and (b) used to trigger a bogus Let's Encrypt/ACME certificate request for
-# that "hostname" before `auto_https off` was added below.
+#   SERVER_NAME           Site address(es). Default ":80": plain HTTP, any Host header, no certificate
+#                         (the right default behind Traefik or any TLS-terminating proxy). Set a real
+#                         domain (e.g. "demo.example.com") and Caddy provisions/renews a Let's Encrypt
+#                         certificate automatically (ports 80 and 443 must then be reachable). Several
+#                         comma-separated addresses are allowed, e.g. "demo.example.com, :8080".
+#                         NB: the default is written ":80" (note the colon); "80" alone would be parsed
+#                         by Caddy as the *hostname* "80".
+#   FRANKENPHP_WORKER_MODE "on" | "off" (default "off"): boots the Symfony kernel once per worker and
+#                         keeps it in memory between requests (see frankenphp/worker/*.caddyfile).
+#                         NB: do NOT name it FRANKENPHP_WORKER: FrankenPHP exposes its own
+#                         $_SERVER['FRANKENPHP_WORKER'] flag inside workers, and any value of an env var
+#                         with that name (even "off") would make symfony/runtime think it runs in a worker.
+#   FRANKENPHP_WORKER_NUM Number of worker threads when the worker is on (default: FrankenPHP's own
+#                         default, 2 x the number of CPUs).
+#   MAX_REQUESTS          Requests served by one worker before it is recycled (default 500).
+#   HEALTHCHECK_PORT      Loopback-style probe port used by the image HEALTHCHECK (default 2090).
+#   CADDY_GLOBAL_OPTIONS / FRANKENPHP_CONFIG
+#                         Escape hatches injected verbatim into the global options block / the
+#                         `frankenphp` block (e.g. FRANKENPHP_CONFIG="num_threads 8").
+#
+# https://frankenphp.dev/docs/config/ - https://caddyserver.com/docs/caddyfile
 {
-	auto_https off
+	# Never try to install Caddy's local CA into the container trust store.
+	skip_install_trust
+
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
 }
 
-:80 {
+# The second address is the probe listener used by the container HEALTHCHECK: it is plain HTTP whatever
+# SERVER_NAME is (a named site would redirect :80 to HTTPS and a real domain would not resolve inside
+# the container) and it goes through the exact same php_server/worker as real traffic. It only ever
+# serves /healthz (see below) and is never published by the image.
+{$SERVER_NAME::80}, http://127.0.0.1:{$HEALTHCHECK_PORT:2090} {
 	root * /app/public
+
+	@probe_listener expression `{http.request.local.port} == {$HEALTHCHECK_PORT:2090}`
+
+	@probe_other {
+		expression `{http.request.local.port} == {$HEALTHCHECK_PORT:2090}`
+		not path /healthz
+	}
+	respond @probe_other 404
+
+	# Do not flood the access log with the HEALTHCHECK probes.
+	log_skip @probe_listener
+
 	encode zstd br gzip
 
-	# Disable Topics tracking unless explicitly enabled: https://github.com/jkarlin/topics
-	header ?Permissions-Policy "browsing-topics=()"
+	log {
+		output stdout
+	}
 
-	# php_server is the FrankenPHP all-in-one directive: it sets up the
-	# index.php front-controller rewrite and static file serving.
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Disable Topics tracking: https://github.com/jkarlin/topics
+		Permissions-Policy "browsing-topics=()"
+		-Server
+		-X-Powered-By
+	}
+
+	# HSTS only when Caddy itself terminates TLS (a real SERVER_NAME). Behind a proxy that terminates
+	# TLS, the proxy owns that header.
+	@tls protocol https
+	header @tls Strict-Transport-Security "max-age=31536000"
+
+	# AssetMapper compiles /assets/* to content-hashed file names (app-<hash>.js, ...): they never change.
+	@immutable_assets {
+		path /assets/*
+		file
+	}
+	header @immutable_assets Cache-Control "public, max-age=31536000, immutable"
+
+	# Everything that is not a static file is rendered by PHP (HTML, redirects, errors): never cache it.
+	# ">" defers the header so it also replaces the Cache-Control set by Symfony.
+	@dynamic not file
+	header @dynamic >Cache-Control "no-store"
+
+	# php_server = index.php front-controller rewrite + PHP execution + static file serving.
 	php_server {
-		# Uncomment to run Symfony in worker mode for higher throughput
-		# (keeps the app booted in memory between requests).
-		# See https://frankenphp.dev/docs/worker/ and https://symfony.com/doc/current/frankenphp.html
-		# worker ./public/index.php
+		# Empty file ("off", default) or the `worker { ... }` block ("on").
+		import /etc/frankenphp/worker/{$FRANKENPHP_WORKER_MODE:off}.caddyfile
 	}
 }

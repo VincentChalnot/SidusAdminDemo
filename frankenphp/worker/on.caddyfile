@@ -1,0 +1,11 @@
+# Worker mode enabled (FRANKENPHP_WORKER_MODE=on): the Symfony kernel is booted once per worker thread and
+# serves many requests. symfony/runtime >= 7.4 detects FrankenPHP workers natively (no extra package,
+# no APP_RUNTIME) and recycles the worker after FRANKENPHP_LOOP_MAX requests.
+#
+# https://frankenphp.dev/docs/worker/
+worker {
+	file /app/public/index.php
+	num {$FRANKENPHP_WORKER_NUM:0}
+	# Recycle each worker after this many requests (frees leaked memory, re-boots the kernel).
+	env FRANKENPHP_LOOP_MAX {$MAX_REQUESTS:500}
+}
