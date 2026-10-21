@@ -12,8 +12,10 @@
 #   BUILD=0                 do not (re)build, use IMAGE as is   (default 1)
 #   PORT                    host port on 127.0.0.1               (default 18080)
 #   MARIADB_VERSION         mariadb image tag                    (default 11.4)
-#   FRANKENPHP_WORKER_MODE  on|off passed to the container       (default off; "on" needs worker-safe bundles)
-#   FRANKENPHP_WORKER_NUM   worker threads passed to the container
+#   FRANKENPHP_WORKER_MODE  on|off passed to the container       (default: the image's, "on")
+#   FRANKENPHP_WORKER_NUM   worker threads passed to the container (default: the image's, 2 x CPUs)
+#   MAX_REQUESTS            requests per worker before it is recycled (default: the image's, 500). A low value
+#                           (e.g. 10) proves the recycling: the script then also requires worker restarts.
 #   SMOKE_ROUNDS            see scripts/smoke.sh
 #   KEEP=1                  leave the containers/network running (for debugging); remove them yourself:
 #                           docker rm -f -v <app> <db> && docker network rm <network>
@@ -67,8 +69,10 @@ docker run -d --name "$APP" --network "$NETWORK" -p "127.0.0.1:$PORT:80" \
 	-e APP_SECRET="$(random_hex)" \
 	-e DATABASE_URL="mysql://symfony:$DB_PASSWORD@$DB:3306/symfony?serverVersion=mariadb-$MARIADB_VERSION.0" \
 	-e TRUSTED_PROXIES=127.0.0.1 \
+	-e CADDY_GLOBAL_OPTIONS=metrics \
 	${FRANKENPHP_WORKER_MODE:+-e FRANKENPHP_WORKER_MODE="$FRANKENPHP_WORKER_MODE"} \
 	${FRANKENPHP_WORKER_NUM:+-e FRANKENPHP_WORKER_NUM="$FRANKENPHP_WORKER_NUM"} \
+	${MAX_REQUESTS:+-e MAX_REQUESTS="$MAX_REQUESTS"} \
 	"$IMAGE" >/dev/null
 
 scripts/smoke.sh "http://127.0.0.1:$PORT"
@@ -81,3 +85,9 @@ for _ in $(seq 1 30); do
 done
 echo "== Container health: $health ($(docker exec "$APP" id))"
 [ "$health" = healthy ]
+
+# Worker mode must be what was asked for, as seen by FrankenPHP itself (not by the environment variable), and a low
+# MAX_REQUESTS must have recycled the workers.
+mode="$(docker exec "$APP" printenv FRANKENPHP_WORKER_MODE || echo off)"
+echo "== Worker mode (FRANKENPHP_WORKER_MODE=$mode${MAX_REQUESTS:+, MAX_REQUESTS=$MAX_REQUESTS${FRANKENPHP_WORKER_NUM:+, FRANKENPHP_WORKER_NUM=$FRANKENPHP_WORKER_NUM}})"
+scripts/assert-worker.sh "$APP" "$mode" ${MAX_REQUESTS:+recycling}
